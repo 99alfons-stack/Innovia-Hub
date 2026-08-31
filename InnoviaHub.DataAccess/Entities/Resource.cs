@@ -5,8 +5,6 @@ namespace InnoviaHub.DataAccess.Entities;
 public class Resource : Entity<Guid>
 {
     
-    public Guid CompanyId { get; set; }
-
     // Hämtar typ av resurs, t.ex. Desk, MeetingRoom, VRHeadset, AIServer
     public Guid ResourceTypeId { get; set; }
 

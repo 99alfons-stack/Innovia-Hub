@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #080e14;
+  --color-surface: #0d1824;
+  --color-panel: #111e2d;
+  --color-border: #1e3347;
+  --color-teal: #00d4aa;
+  --color-teal-dim: #00a882;
+  --color-amber: #f59e0b;
+  --color-rose: #f43f5e;
+  --color-blue: #3b82f6;
+  --color-text: #e2eaf2;
+  --color-muted: #7a94aa;
+  --font-display: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e3347 transparent;
+}
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #1e3347; border-radius: 2px; }
+
+body {
+  background: #080e14;
+  color: #e2eaf2;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 212, 170, 0.3); }
+  50% { box-shadow: 0 0 24px rgba(0, 212, 170, 0.6); }
+}
+
+.animate-fade-up { animation: fade-up 0.5s ease forwards; }
+.animate-slide-in { animation: slide-in 0.4s ease forwards; }
+.animate-glow { animation: glow-pulse 2.5s ease-in-out infinite; }
+.pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+.teal-glow {
+  box-shadow: 0 0 0 1px rgba(0, 212, 170, 0.2), 0 4px 24px rgba(0, 212, 170, 0.1);
+}
+
+.grid-bg {
+  background-image:
+          linear-gradient(rgba(30, 51, 71, 0.4) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(30, 51, 71, 0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+}

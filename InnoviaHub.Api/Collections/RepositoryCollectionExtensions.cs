@@ -1,4 +1,5 @@
 ﻿using InnoviaHub.DataAccess.Repositories;
+using InnoviaHub.DataAccess.Repositories.Interfaces;
 
 namespace InnoviaHub.Api.Collections;
 
@@ -9,6 +10,7 @@ public static class RepositoryCollectionExtensions
     public static IServiceCollection AddApplicationRepositories(this IServiceCollection services)
     {
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IResourceTypeRepository, ResourceTypeRepository>();
         
         return services;
     }

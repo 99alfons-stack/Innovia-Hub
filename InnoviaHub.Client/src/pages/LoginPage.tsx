@@ -35,14 +35,15 @@ export default function LoginPage({ onBack }: LoginPageProps) {
         </div>
         {/*========================================== LOGOTYP END ==================================================*/}
 
-        <button
+        {/*<button
           onClick={onBack}
           className="text-sm"
           style={{ color: "#7a94aa" }}
         >
           ← Tillbaka
         </button>
-      </header>
+      </header>*/}
+      
       {/*========================================== HEADER END ==================================================*/}
 
       {/*========================================== LOGIN-INNEHÅLL START ==================================================*/}

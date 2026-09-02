@@ -1,23 +1,25 @@
-using InnoviaHub.Api.Services;
-using InnoviaHub.Api.Services.Interfaces;
+using InnoviaHub.Api.Data;
+using InnoviaHub.Api.Collections;
 using InnoviaHub.DataAccess;
-using InnoviaHub.DataAccess.Repositories;
-using InnoviaHub.DataAccess.Repositories.Interfaces;
+using InnoviaHub.DataAccess.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = Environment.GetEnvironmentVariable("SQL_ConnectionString")
-    ?? throw new InvalidOperationException("SQL_ConnectionString environment variable is missing");
+    ?? throw new InvalidOperationException("SQL_CONNECTION_STRING IS MISSING");
 
 builder.Services.AddDbContext<InnoviaHubDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-//Repositories
-builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddIdentity<User, IdentityRole<Guid>>()
+    .AddEntityFrameworkStores<InnoviaHubDbContext>();
 
-//Services
-builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddAuthorization();
+
+builder.Services.AddApplicationServices();
+builder.Services.AddApplicationRepositories();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -26,6 +28,14 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+    await IdentitySeeder.SeedRolesAsync(roleManager);
+    await IdentitySeeder.SeedAdminAsync(userManager);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -33,6 +43,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

@@ -1,0 +1,13 @@
+﻿@BASE_URL = http://localhost:5193
+
+@EMAIL = admin@innoviahub.se
+@PASSWORD = Admin1234!
+
+### LOGIN
+POST {{BASE_URL}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "{{EMAIL}}",
+  "password": "{{PASSWORD}}"
+}

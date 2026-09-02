@@ -1,61 +1,80 @@
 ﻿using InnoviaHub.Api.Services.Interfaces;
 using InnoviaHub.DataAccess.Entities;
-using InnoviaHub.DataAccess.Repositories.Interfaces;
 using InnoviaHub.Shared.DTOs.User;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace InnoviaHub.Api.Services;
 
-public class UserService(IUserRepository repository) : IUserService
+public class UserService(UserManager<User> userManager) : IUserService
 {
     public async Task<IEnumerable<UserDto>> GetAllUsers()
     {
-        var users = await repository.GetAllUsers();
+        var users = await userManager.Users.ToListAsync();
+        
+        var result = new List<UserDto>();
 
-        return users.Select(user => new UserDto
+        foreach (var user in users)
         {
-            Id = user.Id,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            IsAdmin = user.IsAdmin
-        });
+            var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
+
+            result.Add(new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsAdmin = isAdmin
+            });
+        }
+        
+        return result;
     }
 
     public async Task<UserDto?> GetUserById(Guid userId)
     {
-        var user = await repository.GetUserById(userId);
+        var user = await userManager.FindByIdAsync(userId.ToString());
         
         if (user is null)
             return null;
-
+        
+        var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
+        
         return new UserDto
         {
             Id = user.Id,
-            Email = user.Email,
+            Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            IsAdmin = user.IsAdmin
+            IsAdmin = isAdmin
         };
     }
 
     public async Task<UserDto> CreateUser(CreateUserDto dto)
     {
-        var existingUser = await repository.GetUserByEmail(dto.Email);
+        var existingUser = await userManager.FindByEmailAsync(dto.Email);
         
         if (existingUser is not null)
-            throw new InvalidOperationException("User already exists");
+            throw new InvalidOperationException("USER_ALREADY_EXISTS");
 
         var user = new User
         {
             Id = Guid.NewGuid(),
+            UserName = dto.Email,
             Email = dto.Email,
             FirstName = dto.FirstName,
             LastName = dto.LastName,
-            Password = dto.Password,
-            IsAdmin = false
         };
         
-        await repository.AddUser(user);
+        var result = await userManager.CreateAsync(user, dto.Password);
+
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(x => x.Description));
+            throw new InvalidOperationException(errors);
+        }
+        
+        await userManager.AddToRoleAsync(user, "Member");
 
         return new UserDto
         {
@@ -63,22 +82,28 @@ public class UserService(IUserRepository repository) : IUserService
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            IsAdmin = user.IsAdmin
+            IsAdmin = false
         };
     }
 
     public async Task<UserDto?> UpdateUser(Guid userId, UpdateUserDto dto)
     {
-        var user = await repository.GetUserById(userId);
+        var user = await userManager.FindByIdAsync(userId.ToString());
         
         if (user is null)
             return null;
         
+        user.UserName = dto.Email;
         user.Email = dto.Email;
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
         
-        await repository.UpdateUser(user);
+        var result = await userManager.UpdateAsync(user);
+        
+        if (!result.Succeeded)
+            throw new InvalidOperationException("COULD_NOT_UPDATE_USER");
+        
+        var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
 
         return new UserDto
         {
@@ -86,18 +111,19 @@ public class UserService(IUserRepository repository) : IUserService
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            IsAdmin = user.IsAdmin
+            IsAdmin = isAdmin
         };
     }
 
     public async Task<bool> DeleteUser(Guid userId)
     {
-        var user = await repository.GetUserById(userId);
+        var user = await userManager.FindByIdAsync(userId.ToString());
 
         if (user is null)
             return false;
         
-        await repository.DeleteUser(user);
-        return true;
+        var result = await userManager.DeleteAsync(user);
+        
+        return result.Succeeded;
     }
 }

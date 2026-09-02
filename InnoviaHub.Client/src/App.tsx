@@ -42,10 +42,9 @@ export default function App() {
               </button>
           ))}
         </nav>
-
-        {view === "landing" && <LandingPage onBook={() => setView("booking")} />}
-        {view === "booking" && <BookingPage onAdmin={() => setView("admin")} />}
-        {view === "admin" && <AdminPage onBack={() => setView("landing")} />}
+            {view === "landing" && <LandingPage onBook={() => setView("booking")} />}
+            {view === "booking" && <BookingPage onAdmin={() => setView("admin")} />}
+            {view === "admin" && <AdminPage onBack={() => setView("landing")} />}
       </div>
   );
 }

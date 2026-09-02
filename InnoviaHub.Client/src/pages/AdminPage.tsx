@@ -2,33 +2,23 @@ import { useState } from "react";
 
 type AdminTab = "dashboard" | "sensors" | "resources" | "members";
 
+type User = {
+  id: string;
+  firstname: string;
+  lastname: string;
+  isAdmin: boolean;
+};
+
+const recentBookings = [
+  { resource: "Mötesrum A", user: "Fredrik Fritzon", time: "09:00–11:00", date: "Idag", status: "active" },
+  { resource: "AI-server", user: "Fredrik Fritzon", time: "08:00–16:00", date: "Idag", status: "active" },
+];
+
 const sensors = [
   { id: "s1", name: "Temperatur – Mötesrum A", value: "22.4°C", status: "ok", location: "Rum A", icon: "🌡", trend: "+0.3°" },
   { id: "s2", name: "Luftkvalitet – Mötesrum B", value: "CO₂ 412 ppm", status: "ok", location: "Rum B", icon: "💨", trend: "Stabilt" },
   { id: "s3", name: "Rörelse – Coworking zon A", value: "Aktiv", status: "ok", location: "Zon A", icon: "👁", trend: "9 pers." },
   { id: "s4", name: "Elförbrukning – AI-server", value: "3.8 kWh", status: "warn", location: "Serverhall", icon: "⚡", trend: "↑ 12%" },
-  { id: "s5", name: "Temperatur – AI-server", value: "71°C", status: "warn", location: "Serverhall", icon: "🌡", trend: "↑ 8°C" },
-  { id: "s6", name: "Rörelse – Serverhall", value: "Inaktiv", status: "ok", location: "Serverhall", icon: "🔒", trend: "Inga larm" },
-  { id: "s7", name: "Temperatur – Mötesrum C", value: "19.8°C", status: "ok", location: "Rum C", icon: "🌡", trend: "-0.5°" },
-  { id: "s8", name: "Luftkvalitet – Coworking", value: "CO₂ 689 ppm", status: "alert", location: "Zon B", icon: "💨", trend: "↑ Hög" },
-];
-
-const members = [
-  { id: "m1", name: "Marcus Lindberg", email: "marcus@nexify.se", role: "Startup", joined: "2024-03-12", bookings: 47, status: "active" },
-  { id: "m2", name: "Sarah Chen", email: "sarah@deeproots.io", role: "Forskare", joined: "2024-01-08", bookings: 89, status: "active" },
-  { id: "m3", name: "Erik Johansson", email: "erik@pivotlabs.se", role: "Startup", joined: "2024-06-22", bookings: 23, status: "active" },
-  { id: "m4", name: "Amina Osei", email: "amina@uni.se", role: "Universitetspart.", joined: "2023-11-01", bookings: 134, status: "active" },
-  { id: "m5", name: "Jonas Falk", email: "jonas@ionstack.io", role: "Startup", joined: "2025-01-14", bookings: 11, status: "inactive" },
-  { id: "m6", name: "Lisa Bergström", email: "lisa@citylabs.se", role: "Konsult", joined: "2024-09-03", bookings: 58, status: "active" },
-];
-
-const recentBookings = [
-  { resource: "Mötesrum A", user: "Sarah Chen", time: "09:00–11:00", date: "Idag", status: "active" },
-  { resource: "AI-server", user: "Amina Osei", time: "08:00–16:00", date: "Idag", status: "active" },
-  { resource: "VR-headset #2", user: "Marcus Lindberg", time: "10:00–11:00", date: "Idag", status: "active" },
-  { resource: "Mötesrum C", user: "Erik Johansson", time: "13:00–15:00", date: "Idag", status: "upcoming" },
-  { resource: "Skrivbord 3", user: "Lisa Bergström", time: "08:00–17:00", date: "Idag", status: "active" },
-  { resource: "Mötesrum B", user: "Jonas Falk", time: "09:00–10:00", date: "Igår", status: "completed" },
 ];
 
 function StatusBadge({ status }: { status: string }) {
@@ -54,6 +44,35 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AdminPage({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<AdminTab>("dashboard");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [memberList, setMemberList] = useState<User[]>([
+    { id: "m1", firstname: "Janne", lastname: "Kreml", isAdmin: false },
+    { id: "m2", firstname: "Fredrik", lastname: "Fritzon", isAdmin: false },
+  ]);
+
+  //Formulärdata för ny medlem
+  const [form, setForm] = useState({
+    firstname: "",
+    lastname: "",
+    isAdmin: false,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.firstname.trim() || !form.lastname.trim()) return;
+
+    const newUser: User = {
+      id: `m${Date.now()}`,
+      firstname: form.firstname.trim(),
+      lastname: form.lastname.trim(),
+      isAdmin: form.isAdmin,
+    };
+
+    setMemberList((prev) => [newUser, ...prev]);
+    setForm({ firstname: "", lastname: "", isAdmin: false });
+    setIsFormOpen(false);
+  };
 
   const tabs: { id: AdminTab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Översikt", icon: "◈" },
@@ -384,8 +403,9 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                   Medlemmar
                 </h1>
                 <button
+                  onClick={() => setIsFormOpen(true)}
                   className="px-4 py-2 rounded-lg text-sm font-semibold"
-                  style={{ background: "#00d4aa", color: "#080e14", fontFamily: "Outfit, sans-serif" }}
+                  style={{ background: "#00d4aa", color: "#080e14", fontFamily: "Outfit, sans-serif", cursor: "pointer" }}
                 >
                   + Ny medlem
                 </button>
@@ -395,7 +415,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                 <table className="w-full">
                   <thead>
                     <tr style={{ background: "#111e2d", borderBottom: "1px solid #1e3347" }}>
-                      {["Namn", "Roll", "E-post", "Bokningar", "Anslöt", "Status"].map((h) => (
+                      {["Förnamn", "Efternamn", "Admin", "Status"].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: "#7a94aa", fontFamily: "Outfit, sans-serif" }}>
                           {h}
                         </th>
@@ -403,35 +423,179 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {members.map((m, i) => (
+                    {memberList.map((m, i) => (
                       <tr
                         key={m.id}
                         style={{ borderBottom: "1px solid #1e3347", background: i % 2 === 0 ? "transparent" : "#0a1520" }}
                       >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                              style={{
-                                background: `hsl(${m.name.charCodeAt(0) * 17 % 360}, 30%, 20%)`,
-                                color: `hsl(${m.name.charCodeAt(0) * 17 % 360}, 70%, 65%)`,
-                                border: `1px solid hsl(${m.name.charCodeAt(0) * 17 % 360}, 30%, 30%)`,
-                              }}
-                            >
-                              {m.name.split(" ").map((n) => n[0]).join("")}
-                            </div>
-                            <span className="text-sm font-medium" style={{ color: "#e2eaf2" }}>{m.name}</span>
-                          </div>
+                        <td className="px-4 py-3 text-sm" style={{ color: "#e2eaf2" }}>{m.firstname}</td>
+                        <td className="px-4 py-3 text-sm" style={{ color: "#e2eaf2" }}>{m.lastname}</td>
+                        <td className="px-4 py-3 text-sm" style={{ color: "#7a94aa" }}>
+                          {m.isAdmin ? "Ja" : "Nej"}
                         </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: "#7a94aa" }}>{m.role}</td>
-                        <td className="px-4 py-3 text-sm mono" style={{ color: "#7a94aa" }}>{m.email}</td>
-                        <td className="px-4 py-3 text-sm mono font-medium" style={{ color: "#00d4aa" }}>{m.bookings}</td>
-                        <td className="px-4 py-3 text-sm mono" style={{ color: "#7a94aa" }}>{m.joined}</td>
-                        <td className="px-4 py-3"><StatusBadge status={m.status} /></td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status="active" />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Form */}
+          {isFormOpen && (
+            <div
+              style={{ position: "fixed", inset: 0, background: "rgba(8, 14, 20, 0.7)", display: "flex", alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1000,
+              }}
+              onClick={() => setIsFormOpen(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: "100%",
+                  maxWidth: 420,
+                  background: "#0d1824",
+                  border: "1px solid #1e3347",
+                  borderRadius: 16,
+                  padding: 24,
+                  boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 20,
+                  }}
+                >
+                  <h2
+                    style={{
+                      margin: 0,
+                      color: "#e2eaf2",
+                      fontFamily: "Outfit, sans-serif",
+                      fontSize: 18,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Lägg till medlem
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setIsFormOpen(false)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#7a94aa",
+                      fontSize: 24,
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
+                  <div>
+                    <label style={{ display: "block", color: "#7a94aa", marginBottom: 8, fontSize: 14 }}>
+                      Förnamn
+                    </label>
+                    <input
+                      type="text"
+                      value={form.firstname}
+                      onChange={(e) => setForm({ ...form, firstname: e.target.value })}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        background: "#111e2d",
+                        border: "1px solid #1e3347",
+                        borderRadius: 10,
+                        padding: "10px 12px",
+                        color: "#e2eaf2",
+                        fontSize: 14,
+                      }}
+                      placeholder="T.ex. Anna"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#7a94aa", marginBottom: 8, fontSize: 14 }}>
+                      Efternamn
+                    </label>
+                    <input
+                      type="text"
+                      value={form.lastname}
+                      onChange={(e) => setForm({ ...form, lastname: e.target.value })}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        background: "#111e2d",
+                        border: "1px solid #1e3347",
+                        borderRadius: 10,
+                        padding: "10px 12px",
+                        color: "#e2eaf2",
+                        fontSize: 14,
+                      }}
+                      placeholder="T.ex. Svensson"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        color: "#7a94aa",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.isAdmin}
+                        onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })}
+                        style={{ cursor: "pointer", accentColor: "#00d4aa" }}
+                      />
+                      <span>Admin</span>
+                    </label>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsFormOpen(false)}
+                      style={{
+                        background: "transparent",
+                        border: "1px solid #1e3347",
+                        color: "#7a94aa",
+                        borderRadius: 10,
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        fontSize: 14,
+                      }}
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      type="submit"
+                      style={{
+                        background: "#00d4aa",
+                        border: "none",
+                        color: "#080e14",
+                        borderRadius: 10,
+                        padding: "10px 16px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontSize: 14,
+                      }}
+                    >
+                      Spara medlem
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

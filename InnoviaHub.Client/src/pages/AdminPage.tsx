@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {getAllUsers} from "../../services/userService"
 
 type AdminTab = "dashboard" | "sensors" | "resources" | "members";
 
@@ -45,11 +46,21 @@ function StatusBadge({ status }: { status: string }) {
 export default function AdminPage({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<AdminTab>("dashboard");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [memberList, setMemberList] = useState<User[]>([
-    { id: "m1", firstname: "Janne", lastname: "Kreml", isAdmin: false },
-    { id: "m2", firstname: "Fredrik", lastname: "Fritzon", isAdmin: false },
-  ]);
+  const [memberList, setMemberList] = useState<User[]>([]);
 
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await getAllUsers();
+        setMemberList(users);
+      } catch (error) {
+        console.error("Fel vid hämtning av användare", error);
+      }
+    }
+    loadUsers();
+  }, [])
+  
+  
   //Formulärdata för ny medlem
   const [form, setForm] = useState({
     firstname: "",

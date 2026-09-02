@@ -4,8 +4,20 @@ using InnoviaHub.DataAccess;
 using InnoviaHub.DataAccess.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+   options.AddDefaultPolicy(policy =>
+   {
+       policy
+       .WithOrigins("http://localhost:5173")
+       .AllowAnyHeader()
+       .AllowAnyMethod();
+   });
+});
 
 var connectionString = Environment.GetEnvironmentVariable("SQL_ConnectionString")
     ?? throw new InvalidOperationException("SQL_CONNECTION_STRING IS MISSING");
@@ -44,6 +56,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

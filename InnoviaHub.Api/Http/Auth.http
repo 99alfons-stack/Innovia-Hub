@@ -1,6 +1,6 @@
 ﻿@BASE_URL = http://localhost:5193
 
-@EMAIL = Admin@innoviahub.se
+@EMAIL = admin@innoviahub.se
 @PASSWORD = Admin1234!
 
 ### LOGIN

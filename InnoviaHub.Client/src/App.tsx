@@ -12,7 +12,7 @@ export default function App() {
   return (
       <div className="min-h-screen" style={{ background: "#080e14" }}>
         {/* Dev nav */}
-        <nav
+        {view !== "login" && <nav
             className="fixed bottom-6 left-1/2 z-50 flex gap-1 rounded-full px-2 py-2"
             style={{
               transform: "translateX(-50%)",
@@ -43,7 +43,7 @@ export default function App() {
                 {label}
               </button>
           ))}
-        </nav>
+        </nav>}
             {view === "landing" && <LandingPage onBook={() => setView("booking")} />}
             {view === "booking" && <BookingPage onAdmin={() => setView("admin")} />}
             {view === "admin" && <AdminPage onBack={() => setView("landing")} />}

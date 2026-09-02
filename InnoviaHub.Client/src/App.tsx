@@ -7,7 +7,7 @@ import LoginPage from "./pages/LoginPage";
 type View = "landing" | "booking" | "admin" | "login";
 
 export default function App() {
-  const [view, setView] = useState<View>("landing");
+  const [view, setView] = useState<View>("login");
 
   return (
       <div className="min-h-screen" style={{ background: "#080e14" }}>

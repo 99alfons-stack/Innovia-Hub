@@ -2,8 +2,9 @@ import { useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import BookingPage from "./pages/BookingPage";
 import AdminPage from "./pages/AdminPage";
+import LoginPage from "./pages/LoginPage";
 
-type View = "landing" | "booking" | "admin";
+type View = "landing" | "booking" | "admin" | "login";
 
 export default function App() {
   const [view, setView] = useState<View>("landing");
@@ -26,6 +27,7 @@ export default function App() {
                 { id: "landing", label: "Landingssida" },
                 { id: "booking", label: "Bokningssystem" },
                 { id: "admin", label: "Adminpanel" },
+                { id: "login", label:"Log in"}
               ] as { id: View; label: string }[]
           ).map(({ id, label }) => (
               <button
@@ -45,6 +47,7 @@ export default function App() {
             {view === "landing" && <LandingPage onBook={() => setView("booking")} />}
             {view === "booking" && <BookingPage onAdmin={() => setView("admin")} />}
             {view === "admin" && <AdminPage onBack={() => setView("landing")} />}
+            {view === "login" && <LoginPage onBack={() => setView("landing")} />}
       </div>
   );
 }

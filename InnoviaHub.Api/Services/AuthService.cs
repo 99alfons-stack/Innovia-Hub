@@ -1,4 +1,5 @@
-﻿using InnoviaHub.Api.Services.Interfaces;
+﻿using System.Security.Claims;
+using InnoviaHub.Api.Services.Interfaces;
 using InnoviaHub.DataAccess.Entities;
 using InnoviaHub.Shared.DTOs.Auth;
 using Microsoft.AspNetCore.Identity;
@@ -8,6 +9,25 @@ namespace InnoviaHub.Api.Services;
 public class AuthService(UserManager<User> userManager,
     SignInManager<User> signInManager) : IAuthService
 {
+    public async Task<LoginResponseDto> GetCurrentUserAsync(ClaimsPrincipal principal)
+    {
+        var user = await userManager.GetUserAsync(principal);
+        
+        if (user is null)
+            return null;
+        
+        var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
+
+        return new LoginResponseDto
+        {
+            UserId = user.Id,
+            Email = user.Email ?? string.Empty,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            IsAdmin = isAdmin
+        };
+    }
+    
     public async Task<LoginResponseDto?> LoginAsync(LoginDto dto)
     {
         var user = await userManager.FindByEmailAsync(dto.Email);
@@ -35,5 +55,10 @@ public class AuthService(UserManager<User> userManager,
             LastName = user.LastName,
             IsAdmin = isAdmin
         };
+    }
+
+    public async Task LogoutAsync()
+    {
+        await signInManager.SignOutAsync();
     }
 }

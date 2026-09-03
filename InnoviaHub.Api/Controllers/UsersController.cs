@@ -27,7 +27,7 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(user);
     }
 
-    [Authorize(Roles = "Admin")]
+    //[Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
     {

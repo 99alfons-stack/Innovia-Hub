@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import {getAllUsers} from "../../services/userService"
+import {getAllUsers, deleteUser, createUser} from "../../services/userService"
 
 type AdminTab = "dashboard" | "sensors" | "resources" | "members";
 
@@ -59,31 +59,63 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
     }
     loadUsers();
   }, [])
-  
-  
+
   //Formulärdata för ny medlem
   const [form, setForm] = useState({
     firstname: "",
     lastname: "",
+    email: "",
+    password: "",
     isAdmin: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.firstname.trim() || !form.lastname.trim()) return;
+    if (!form.firstname.trim() || !form.lastname.trim() 
+        || !form.email.trim() || !form.password.trim()) return;
 
-    const newUser: User = {
-      id: `m${Date.now()}`,
-      firstname: form.firstname.trim(),
-      lastname: form.lastname.trim(),
-      isAdmin: form.isAdmin,
-    };
+    try {
+      const newUser = await createUser({
+        firstName: form.firstname.trim(),
+        lastName: form.lastname.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
+      setMemberList((prev) => [newUser, ...prev]);
 
-    setMemberList((prev) => [newUser, ...prev]);
-    setForm({ firstname: "", lastname: "", isAdmin: false });
-    setIsFormOpen(false);
+      setForm({
+        firstname: "",
+        lastname: "",
+        email: "",
+        password: "",
+        isAdmin: false,
+      });
+
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error("Fel vid skapande av medlem", error);
+      window.alert("Kunde inte skapa medlem")
+    }
   };
+
+  //Ta bort en medlem ur medlemslistan
+  const handleDeleteUser = async (user: User) => {
+    const confirmed = window.confirm(
+      `Vill du ta bort ${user.firstname} ${user.lastname}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteUser(user.id);
+
+      setMemberList((prev) => 
+      prev.filter((member) => member.id !== user.id));
+    } catch (error) {
+      console.error("Fel vid borttagning av användare", error)
+      window.alert("Kunde inte ta bort medlem")
+    }
+  }
 
   const tabs: { id: AdminTab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Översikt", icon: "◈" },
@@ -426,7 +458,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                 <table className="w-full">
                   <thead>
                     <tr style={{ background: "#111e2d", borderBottom: "1px solid #1e3347" }}>
-                      {["Förnamn", "Efternamn", "Admin", "Status"].map((h) => (
+                      {["Förnamn", "Efternamn", "Admin", "Status", "Åtgärd"].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: "#7a94aa", fontFamily: "Outfit, sans-serif" }}>
                           {h}
                         </th>
@@ -446,6 +478,16 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status="active" />
+                        </td>
+
+                         <td className="px-4 py-3">
+                         <button type="button" onClick={() => handleDeleteUser(m)}
+                         className="text-xs px-3 py-1 rounded-lg" 
+                         style={{background: "rgba(244, 63, 94, 0.1)",
+                         color: "#f43f5e",
+                         border: "1px solid rgba(244, 63, 94, 0.25)",
+                         cursor: "pointer",
+                         }}>Ta bort</button>
                         </td>
                       </tr>
                     ))}
@@ -551,6 +593,46 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                         fontSize: 14,
                       }}
                       placeholder="T.ex. Svensson"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#7a94aa", marginBottom: 8, fontSize: 14}}>
+                      E-post
+                    </label>
+                    <input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})}
+                    placeholder="T.ex anna@exempel.se"
+                    style={{ 
+                      width: "100%",
+                      boxSizing: "border-box", 
+                      background: "#111e2d", 
+                      border: "1px solid #1e3347",
+                      borderRadius: 10, 
+                      padding: "10px 12px", 
+                      color:"#e2eaf2", 
+                      fontSize: 14,
+                    }}
+                     ></input>
+                  </div>
+
+                  <div>
+                    <label style={{display: "block", color: "#7a94aa", marginBottom: 8, fontSize: 14}}>
+                      Lösenord (måste innehålla minst en stor bokstav, ett specialtecken och en siffra)
+                    </label>
+                    <input type="password"
+                    value={form.password} 
+                    onChange={(e) => setForm({...form, password: e.target.value})}
+                    placeholder="Ange ett lösenord"
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      background: "#111e2d",
+                      border: "1px solid #1e3347",
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      color: "#e2eaf2",
+                      fontSize: 14, 
+                    }}
                     />
                   </div>
 

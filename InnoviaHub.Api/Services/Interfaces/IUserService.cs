@@ -4,9 +4,9 @@ namespace InnoviaHub.Api.Services.Interfaces;
 
 public interface IUserService
 {
-    Task<IEnumerable<UserDto>> GetAllUsers();
-    Task<UserDto?> GetUserById(Guid userId);
-    Task<UserDto> CreateUser(CreateUserDto dto);
-    Task<UserDto?> UpdateUser(Guid userId, UpdateUserDto dto);
-    Task<bool> DeleteUser(Guid userId);
+    Task<IEnumerable<UserDto>> GetAllAsync();
+    Task<UserDto?> GetByIdAsync(Guid id);
+    Task<UserDto> CreateAsync(CreateUserDto dto);
+    Task<UserDto?> UpdateAsync(Guid id, UpdateUserDto dto);
+    Task<bool> DeleteAsync(Guid id);
 }

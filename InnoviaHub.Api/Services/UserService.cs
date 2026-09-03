@@ -8,7 +8,7 @@ namespace InnoviaHub.Api.Services;
 
 public class UserService(UserManager<User> userManager) : IUserService
 {
-    public async Task<IEnumerable<UserDto>> GetAllUsers()
+    public async Task<IEnumerable<UserDto>> GetAllAsync()
     {
         var users = await userManager.Users.ToListAsync();
         
@@ -31,9 +31,9 @@ public class UserService(UserManager<User> userManager) : IUserService
         return result;
     }
 
-    public async Task<UserDto?> GetUserById(Guid userId)
+    public async Task<UserDto?> GetByIdAsync(Guid id)
     {
-        var user = await userManager.FindByIdAsync(userId.ToString());
+        var user = await userManager.FindByIdAsync(id.ToString());
         
         if (user is null)
             return null;
@@ -50,7 +50,7 @@ public class UserService(UserManager<User> userManager) : IUserService
         };
     }
 
-    public async Task<UserDto> CreateUser(CreateUserDto dto)
+    public async Task<UserDto> CreateAsync(CreateUserDto dto)
     {
         var existingUser = await userManager.FindByEmailAsync(dto.Email);
         
@@ -86,9 +86,9 @@ public class UserService(UserManager<User> userManager) : IUserService
         };
     }
 
-    public async Task<UserDto?> UpdateUser(Guid userId, UpdateUserDto dto)
+    public async Task<UserDto?> UpdateAsync(Guid id, UpdateUserDto dto)
     {
-        var user = await userManager.FindByIdAsync(userId.ToString());
+        var user = await userManager.FindByIdAsync(id.ToString());
         
         if (user is null)
             return null;
@@ -115,9 +115,9 @@ public class UserService(UserManager<User> userManager) : IUserService
         };
     }
 
-    public async Task<bool> DeleteUser(Guid userId)
+    public async Task<bool> DeleteAsync(Guid id)
     {
-        var user = await userManager.FindByIdAsync(userId.ToString());
+        var user = await userManager.FindByIdAsync(id.ToString());
 
         if (user is null)
             return false;

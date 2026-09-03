@@ -6,37 +6,37 @@ namespace InnoviaHub.DataAccess.Repositories;
 
 public class ResourceTypeRepository(InnoviaHubDbContext context) : IResourceTypeRepository
 {
-    public async Task<IEnumerable<ResourceType>> GetAllResourceTypes()
+    public async Task<IEnumerable<ResourceType>> GetAllAsync()
     {
         return await context.ResourceTypes.ToListAsync();
     }
 
-    public async Task<ResourceType?> GetResourceTypeById(Guid resourceTypeId)
+    public async Task<ResourceType?> GetByIdAsync(Guid id)
     {
-        return await context.ResourceTypes.FindAsync(resourceTypeId);
+        return await context.ResourceTypes.FindAsync(id);
     }
 
-    public async Task<ResourceType?> GetResourceTypeByName(string resourceTypeName)
+    public async Task<ResourceType?> GetByNameAsync(string name)
     {
         return await context.ResourceTypes
-            .FirstOrDefaultAsync(r => r.Name.Equals(resourceTypeName));
+            .FirstOrDefaultAsync(r => r.Name.Equals(name));
     }
 
-    public async Task AddResourceType(ResourceType resourceType)
+    public async Task AddAsync(ResourceType type)
     {
-        context.ResourceTypes.Add(resourceType);
+        context.ResourceTypes.Add(type);
         await context.SaveChangesAsync();
     }
 
-    public async Task UpdateResourceType(ResourceType resourceType)
+    public async Task UpdateAsync(ResourceType type)
     {
-        context.ResourceTypes.Update(resourceType);
+        context.ResourceTypes.Update(type);
         await context.SaveChangesAsync();
     }
 
-    public Task DeleteResourceType(ResourceType resourceType)
+    public Task DeleteAsync(ResourceType type)
     {
-        context.ResourceTypes.Remove(resourceType);
+        context.ResourceTypes.Remove(type);
         return context.SaveChangesAsync();
     }
 }

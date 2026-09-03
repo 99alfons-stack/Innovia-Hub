@@ -1,9 +1,37 @@
+import { useState, type FormEvent } from "react";
+import { login, type LoginResponse } from "../../services/authService";
+
 type LoginPageProps = {
-  onBack: () => void;
+  onLogin: (user: LoginResponse) => void;
 };
 
-export default function LoginPage({ onBack }: LoginPageProps) {
+export default function LoginPage({ onLogin }: LoginPageProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const user = await login({ email, password });
+      onLogin(user);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Inloggningen misslyckades"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
+    
     <div className="min-h-screen grid-bg" style={{ background: "#080e14" }}>
       {/*========================================== HEADER START ==================================================*/}
       <header
@@ -80,7 +108,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
           {/*========================================== LOGIN RUBRIK END ==================================================*/}
 
           {/*========================================== LOGIN FORMULÄR START ==================================================*/}
-          <form className="space-y-5">
+          <form className="space-y-5"  onSubmit={handleSubmit}>
            
             <div>
               <label
@@ -96,6 +124,9 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               <input
                 type="email"
                 placeholder="namn@exempel.se"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                 style={{
                   background: "#111e2d",
@@ -119,6 +150,9 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               <input
                 type="password"
                 placeholder="Ditt lösenord"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                 style={{
                   background: "#111e2d",
@@ -128,8 +162,15 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               />
             </div>
 
+            {error && (
+              <p className="text-sm" style={{ color: "#ff6b6b" }}>
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
+              disabled={isLoading}
               className="w-full rounded-lg py-3 text-sm font-semibold transition-all"
               style={{
                 background: "#00d4aa",
@@ -137,7 +178,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
                 fontFamily: "Outfit, sans-serif",
               }}
             >
-              Logga in
+              {isLoading ? "Loggar in..." : "Logga in"}
             </button>
           </form>
           {/*========================================== LOGIN-FORMULÄR END ==================================================*/}

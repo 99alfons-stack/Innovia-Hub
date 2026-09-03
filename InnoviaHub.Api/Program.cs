@@ -10,12 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
 {
-   options.AddDefaultPolicy(policy =>
+   options.AddPolicy("Frontend",policy =>
    {
        policy
        .WithOrigins("http://localhost:5173")
        .AllowAnyHeader()
-       .AllowAnyMethod();
+       .AllowAnyMethod()
+       .AllowCredentials();
    });
 });
 
@@ -54,9 +55,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
-app.UseCors();
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -47,7 +47,11 @@ export default function App() {
             {view === "landing" && <LandingPage onBook={() => setView("booking")} />}
             {view === "booking" && <BookingPage onAdmin={() => setView("admin")} />}
             {view === "admin" && <AdminPage onBack={() => setView("landing")} />}
-            {view === "login" && <LoginPage onBack={() => setView("landing")} />}
+            {view === "login" && (
+              <LoginPage
+                onLogin={(user) => setView(user.isAdmin ? "admin" : "booking")}
+              />
+            )}
       </div>
   );
 }

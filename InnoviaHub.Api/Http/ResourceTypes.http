@@ -1,8 +1,8 @@
 ﻿@BASE_URL = http://localhost:5193
 
-@RESOURCE_TYPE_ID = 6eda1f3c-5ae7-4559-ac3f-f4e409620a06
+@RESOURCE_TYPE_ID = RESOURCE_TYPE_ID
 @NAME = VR-Headset
-@DESCRIPTION = Skrivbord
+@DESCRIPTION = VR-headset för virtuella upplevelser och interaktiva projekt.
 
 ### RESOURCE TYPES - Get all resource types
 GET {{BASE_URL}}/api/ResourceTypes

@@ -4,10 +4,10 @@ namespace InnoviaHub.DataAccess.Repositories.Interfaces;
 
 public interface IResourceTypeRepository
 {
-    Task<IEnumerable<ResourceType>> GetAllResourceTypes();
-    Task<ResourceType?> GetResourceTypeById(Guid resourceTypeId);
-    Task<ResourceType?> GetResourceTypeByName(string resourceTypeName);
-    Task AddResourceType(ResourceType resourceType);
-    Task UpdateResourceType(ResourceType resourceType);
-    Task DeleteResourceType(ResourceType resourceType);
+    Task<IEnumerable<ResourceType>> GetAllAsync();
+    Task<ResourceType?> GetByIdAsync(Guid id);
+    Task<ResourceType?> GetByNameAsync(string name);
+    Task AddAsync(ResourceType type);
+    Task UpdateAsync(ResourceType type);
+    Task DeleteAsync(ResourceType type);
 }

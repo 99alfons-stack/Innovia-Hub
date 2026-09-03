@@ -4,10 +4,10 @@ namespace InnoviaHub.Api.Services.Interfaces;
 
 public interface IResourceTypeService
 {
-    Task<IEnumerable<ResourceTypeDto>> GetAllResourceTypes();
-    Task<ResourceTypeDto?> GetResourceTypeById(Guid resourceTypeId);
-    Task<ResourceTypeDto?> GetResourceTypeByName(string resourceTypeName);
-    Task<ResourceTypeDto> CreateResourceType(ResourceTypeDto newResourceType);
-    Task<ResourceTypeDto> UpdateResourceType(Guid resourceTypeId, ResourceTypeDto newResourceType);
-    Task DeleteResourceType(Guid resourceTypeId);
+    Task<IEnumerable<ResourceTypeDto>> GetAllAsync();
+    Task<ResourceTypeDto?> GetByIdAsync(Guid id);
+    Task<ResourceTypeDto?> GetByNameAsync(string name);
+    Task<ResourceTypeDto> CreateAsync(ResourceTypeDto dto);
+    Task<ResourceTypeDto> UpdateAsync(Guid id, ResourceTypeDto dto);
+    Task DeleteAsync(Guid id);
 }

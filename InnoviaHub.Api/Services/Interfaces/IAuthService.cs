@@ -4,5 +4,5 @@ namespace InnoviaHub.Api.Services.Interfaces;
 
 public interface IAuthService
 {
-    Task<LoginResponseDto?> Login(LoginDto dto);
+    Task<LoginResponseDto?> LoginAsync(LoginDto dto);
 }

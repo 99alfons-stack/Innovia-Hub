@@ -5,33 +5,33 @@ namespace InnoviaHub.DataAccess.Repositories;
 
 public class BookingRepository(InnoviaHubDbContext context) : IBookingRepository
 {
-    public async Task AddBooking(Booking booking)
+    public async Task AddAsync(Booking booking)
     {
         await context.Bookings.AddAsync(booking);
         await context.SaveChangesAsync();
     }
 
-    public async Task DeleteBooking(Booking booking)
+    public async Task DeleteAsync(Booking booking)
     {
         context.Bookings.Remove(booking);
         await context.SaveChangesAsync();
     }
 
-    public async Task<IEnumerable<Booking>> GetAllBookings()
+    public async Task<IEnumerable<Booking>> GetAllAsync()
     {
         return await context.Bookings
         .Include(b => b.User)
         .ToListAsync();
     }
 
-    public async Task<Booking?> GetBookingById(Guid id)
+    public async Task<Booking?> GetByIdAsync(Guid id)
     {
         return await context.Bookings
         .Include(b => b.User)
         .FirstOrDefaultAsync(b => b.Id == id);
     }
 
-    public async Task<IEnumerable<Booking>> GetBookingsByUserId(Guid userId)
+    public async Task<IEnumerable<Booking>> GetByUserIdAsync(Guid userId)
     {
         return await context.Bookings
         .Include(b => b.User)
@@ -39,7 +39,7 @@ public class BookingRepository(InnoviaHubDbContext context) : IBookingRepository
         .ToListAsync();
     }
 
-    public async Task UpdateBooking(Booking booking)
+    public async Task UpdateAsync(Booking booking)
     {
         context.Bookings.Update(booking);
         await context.SaveChangesAsync();

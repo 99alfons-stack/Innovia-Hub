@@ -5,78 +5,105 @@ using InnoviaHub.Shared.DTOs.ResourceType;
 
 namespace InnoviaHub.Api.Services;
 
-public class ResourceTypeService(IResourceTypeRepository repository) : IResourceTypeService
+public class ResourceTypeService(IResourceTypeRepository typeRepository) : IResourceTypeService
 {
-    public async Task<IEnumerable<ResourceTypeDto>> GetAllResourceTypes()
+    public async Task<IEnumerable<ResourceTypeDto>> GetAllAsync()
     {
-        var resourceTypes =  await repository.GetAllResourceTypes();
+        var resourceTypes =  await typeRepository.GetAllAsync();
 
-        return resourceTypes
-            .Select(rt => new ResourceTypeDto { Id = rt.Id, Name = rt.Name, Description = rt.Description })
-            .ToList();
+        return
+        [
+            .. resourceTypes
+                .Select(rt => new ResourceTypeDto
+                {
+                    Id = rt.Id, 
+                    Name = rt.Name, 
+                    Description = rt.Description
+                })
+        ];
     }
 
-    public async Task<ResourceTypeDto?> GetResourceTypeById(Guid resourceTypeId)
+    public async Task<ResourceTypeDto?> GetByIdAsync(Guid id)
     {
-        var rt = await repository.GetResourceTypeById(resourceTypeId);
+        var resourceType = await typeRepository.GetByIdAsync(id);
         
-        if (rt is null)
+        if (resourceType is null)
             return null;
         
-        return new ResourceTypeDto { Name = rt.Name, Description = rt.Description };
+        return new ResourceTypeDto
+        {
+            Id = resourceType.Id,
+            Name = resourceType.Name, 
+            Description = resourceType.Description
+        };
     }
 
-    public async Task<ResourceTypeDto?> GetResourceTypeByName(string name)
+    public async Task<ResourceTypeDto?> GetByNameAsync(string name)
     {
-        var rt = await repository.GetResourceTypeByName(name);
+        var resourceType = await typeRepository.GetByNameAsync(name);
         
-        if (rt is null)
+        if (resourceType is null)
             return null;
         
-        return new ResourceTypeDto { Name = rt.Name, Description = rt.Description };
+        return new ResourceTypeDto
+        {
+            Id = resourceType.Id,
+            Name = resourceType.Name, 
+            Description = resourceType.Description
+        };
     }
 
-    public async Task<ResourceTypeDto> CreateResourceType(ResourceTypeDto newResourceType)
+    public async Task<ResourceTypeDto> CreateAsync(ResourceTypeDto dto)
     {
-        var existingResourceTypes = await repository.GetResourceTypeByName(newResourceType.Name);
+        var existingResourceTypes = await typeRepository.GetByNameAsync(dto.Name);
 
         if (existingResourceTypes is not null)
-            throw new ArgumentException("RESOURCE_TYPE_ALREADY_EXISTS");
+            throw new InvalidOperationException("RESOURCE_TYPE_ALREADY_EXISTS");
 
         var resourceType = new ResourceType
         {
             Id = Guid.NewGuid(),
-            Name = newResourceType.Name,
-            Description = newResourceType.Description
+            Name = dto.Name,
+            Description = dto.Description
         };
         
-        await repository.AddResourceType(resourceType);
+        await typeRepository.AddAsync(resourceType);
         
-        return new ResourceTypeDto { Name = newResourceType.Name, Description = newResourceType.Description };
+        return new ResourceTypeDto
+        {
+            Id = resourceType.Id,
+            Name = dto.Name, 
+            Description = dto.Description
+        };
     }
 
-    public async Task<ResourceTypeDto> UpdateResourceType(Guid resourceTypeId, ResourceTypeDto newResourceType)
+    public async Task<ResourceTypeDto> UpdateAsync(Guid id, ResourceTypeDto dto)
     {
-        var existingResourceTypes = await repository.GetResourceTypeById(resourceTypeId);
+        var existingResourceTypes = await typeRepository.GetByIdAsync(id);
         
         if (existingResourceTypes is null)
-            return null;
+            throw new KeyNotFoundException("RESOURCE_TYPE_NOT_FOUND");
 
-        existingResourceTypes.Name = newResourceType.Name;
-        existingResourceTypes.Description = newResourceType.Description;
+        existingResourceTypes.Name = dto.Name;
+        existingResourceTypes.Description = dto.Description;
         
-        await repository.UpdateResourceType(existingResourceTypes);
+        await typeRepository.UpdateAsync(existingResourceTypes);
         
-        return new ResourceTypeDto { Name = newResourceType.Name, Description = newResourceType.Description };
+        return new ResourceTypeDto
+        {
+            Id = dto.Id,
+            Name = dto.Name, 
+            Description = dto.Description
+        };
     }
 
-    public async Task DeleteResourceType(Guid resourceTypeId)
+    public async Task DeleteAsync(Guid resourceTypeId)
     {
-        var rt = await repository.GetResourceTypeById(resourceTypeId);
+        var rt = await typeRepository.GetByIdAsync(resourceTypeId);
         
         if (rt is null)
-            throw new ArgumentException("RESOURCE_TYPE_NOT_FOUND");
+            throw new KeyNotFoundException("RESOURCE_TYPE_NOT_FOUND");
         
-        await repository.DeleteResourceType(rt);
+        await typeRepository.DeleteAsync(rt);
     }
 }

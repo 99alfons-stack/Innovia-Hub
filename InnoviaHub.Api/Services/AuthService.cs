@@ -8,7 +8,7 @@ namespace InnoviaHub.Api.Services;
 public class AuthService(UserManager<User> userManager,
     SignInManager<User> signInManager) : IAuthService
 {
-    public async Task<LoginResponseDto?> Login(LoginDto dto)
+    public async Task<LoginResponseDto?> LoginAsync(LoginDto dto)
     {
         var user = await userManager.FindByEmailAsync(dto.Email);
 

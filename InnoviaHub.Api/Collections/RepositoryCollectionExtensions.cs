@@ -11,6 +11,7 @@ public static class RepositoryCollectionExtensions
     {
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IResourceTypeRepository, ResourceTypeRepository>();
+        services.AddScoped<IResourceRepository, ResourceRepository>();
         
         return services;
     }

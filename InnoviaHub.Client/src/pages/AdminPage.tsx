@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {getAllUsers, deleteUser, createUser} from "../../services/userService"
+import Alert from "../Alert"
 
 type AdminTab = "dashboard" | "sensors" | "resources" | "members";
 
@@ -47,6 +48,8 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<AdminTab>("dashboard");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [memberList, setMemberList] = useState<User[]>([]);
+  const [alert, setAlert] = useState("");
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -94,26 +97,23 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
 
       setIsFormOpen(false);
     } catch (error) {
-      console.error("Fel vid skapande av medlem", error);
-      window.alert("Kunde inte skapa medlem")
+      console.error(error);
+      setAlert("Kunde inte skapa medlem")
     }
   };
 
   //Ta bort en medlem ur medlemslistan
   const handleDeleteUser = async (user: User) => {
-    const confirmed = window.confirm(
-      `Vill du ta bort ${user.firstname} ${user.lastname}?`
-    );
-    if (!confirmed) return;
-
     try {
       await deleteUser(user.id);
 
       setMemberList((prev) => 
       prev.filter((member) => member.id !== user.id));
     } catch (error) {
-      console.error("Fel vid borttagning av användare", error)
-      window.alert("Kunde inte ta bort medlem")
+      console.error(error)
+      setAlert("Kunde inte ta bort medlem")
+    } finally {
+      setUserToDelete(null);
     }
   }
 
@@ -434,6 +434,11 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     ))}
                   </tbody>
                 </table>
+                {alert && !isFormOpen && (
+                  <div className="p-4">
+                    <Alert message={alert} type="error" onClose={() => setAlert("")}/>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -446,7 +451,10 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                   Medlemmar
                 </h1>
                 <button
-                  onClick={() => setIsFormOpen(true)}
+                  onClick={() => {
+                    setAlert("");
+                    setIsFormOpen(true);
+                  }}
                   className="px-4 py-2 rounded-lg text-sm font-semibold"
                   style={{ background: "#00d4aa", color: "#080e14", fontFamily: "Outfit, sans-serif", cursor: "pointer" }}
                 >
@@ -481,7 +489,7 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                         </td>
 
                          <td className="px-4 py-3">
-                         <button type="button" onClick={() => handleDeleteUser(m)}
+                         <button type="button" onClick={() => setUserToDelete(m)}
                          className="text-xs px-3 py-1 rounded-lg" 
                          style={{background: "rgba(244, 63, 94, 0.1)",
                          color: "#f43f5e",
@@ -504,7 +512,10 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                 justifyContent: "center",
                 zIndex: 1000,
               }}
-              onClick={() => setIsFormOpen(false)}
+              onClick={() => {
+                setAlert("");
+                setIsFormOpen(false);
+              }}
             >
               <div
                 onClick={(e) => e.stopPropagation()}
@@ -538,7 +549,10 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                   </h2>
                   <button
                     type="button"
-                    onClick={() => setIsFormOpen(false)}
+                    onClick={() => {
+                      setAlert("");
+                      setIsFormOpen(false);
+                    }}
                     style={{
                       background: "transparent",
                       border: "none",
@@ -656,10 +670,21 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     </label>
                   </div>
 
+                  {alert && (
+                    <Alert
+                      message={alert}
+                      type="error"
+                      onClose={() => setAlert("")}
+                    />
+                  )}
+
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
                     <button
                       type="button"
-                      onClick={() => setIsFormOpen(false)}
+                      onClick={() => {
+                        setAlert("");
+                        setIsFormOpen(false);
+                      }}
                       style={{
                         background: "transparent",
                         border: "1px solid #1e3347",
@@ -687,10 +712,20 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                     >
                       Spara medlem
                     </button>
+
                   </div>
                 </form>
               </div>
             </div>
+          )}
+
+          {userToDelete && (
+            <Alert
+              message={`Vill du ta bort ${userToDelete.firstname} ${userToDelete.lastname}?`}
+              type="confirm"
+              onClose={() => setUserToDelete(null)}
+              onConfirm={() => handleDeleteUser(userToDelete)}
+            />
           )}
         </main>
       </div>

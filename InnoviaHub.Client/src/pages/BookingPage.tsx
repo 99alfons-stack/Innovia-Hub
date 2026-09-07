@@ -1,4 +1,6 @@
 import { useState } from "react";
+import type { LoginResponse } from "../../services/authService";
+import UserAvatar from "../components/UserAvatar";
 
 type ResourceType = "desk" | "room" | "vr" | "ai";
 type Step = "select" | "configure" | "confirm" | "done";
@@ -47,7 +49,7 @@ const typeFilters = [
 const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
 const durations = ["1 timme", "2 timmar", "3 timmar", "Heldag"];
 
-export default function BookingPage({ onAdmin }: { onAdmin: () => void }) {
+export default function BookingPage({ user }: { user: LoginResponse | null }) {
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<Resource | null>(null);
   const [step, setStep] = useState<Step>("select");
@@ -95,16 +97,10 @@ export default function BookingPage({ onAdmin }: { onAdmin: () => void }) {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <UserAvatar user={user} />
           <span className="text-sm" style={{ color: "#7a94aa" }}>
-            Inloggad som <span style={{ color: "#e2eaf2" }}>Marcus Lindberg</span>
+            Inloggad som <span style={{ color: "#e2eaf2" }}>{user?.firstName} {user?.lastName}</span>
           </span>
-          <button
-            onClick={onAdmin}
-            className="text-xs px-3 py-1.5 rounded-lg"
-            style={{ background: "#111e2d", border: "1px solid #1e3347", color: "#7a94aa", fontFamily: "Outfit, sans-serif" }}
-          >
-            Admin →
-          </button>
         </div>
       </header>
 

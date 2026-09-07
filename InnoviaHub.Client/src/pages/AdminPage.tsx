@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { LoginResponse } from "../../services/authService";
 import AdminStatusBadge from "../components/AdminStatusBadge";
 import MembersAdmin from "../components/MembersAdmin";
 import ResourcesAdmin from "../components/ResourcesAdmin";
@@ -76,7 +77,7 @@ const tabs: { id: AdminTab; label: string; icon: string }[] = [
   { id: "members", label: "Medlemmar", icon: "◯" },
 ];
 
-export default function AdminPage({ onBack }: { onBack: () => void }) {
+export default function AdminPage({ onBack, user }: { onBack: () => void; user: LoginResponse }) {
   const [tab, setTab] = useState<AdminTab>("dashboard");
   const alertCount = sensors.filter((sensor) => sensor.status !== "ok").length;
 
@@ -148,13 +149,13 @@ export default function AdminPage({ onBack }: { onBack: () => void }) {
                 border: "1px solid #1e3347",
               }}
             >
-              JL
+                {user.firstName[0]}{user.lastName[0]}
             </div>
             <span
               className="text-sm hidden md:block"
               style={{ color: "#e2eaf2" }}
             >
-              Johanna Lambert
+              {user.firstName} {user.lastName}
             </span>
           </div>
         </div>

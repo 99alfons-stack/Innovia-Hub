@@ -5,6 +5,7 @@ using InnoviaHub.DataAccess.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using InnoviaHub.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddApplicationServices();
 builder.Services.AddApplicationRepositories();
+builder.Services.AddSignalR();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

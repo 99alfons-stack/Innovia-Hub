@@ -1,10 +1,8 @@
 ﻿using InnoviaHub.DataAccess.Repositories;
 using InnoviaHub.DataAccess.Repositories.Interfaces;
 
-namespace InnoviaHub.Api.Collections;
+namespace InnoviaHub.Api.Extensions;
 
-// Samlingspunkt för alla repositories
-// Lägg in repositories här i en service.AddScoped<Interface, Klass>
 public static class RepositoryCollectionExtensions
 {
     public static IServiceCollection AddApplicationRepositories(this IServiceCollection services)
@@ -12,6 +10,7 @@ public static class RepositoryCollectionExtensions
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IResourceTypeRepository, ResourceTypeRepository>();
         services.AddScoped<IResourceRepository, ResourceRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
         
         return services;
     }

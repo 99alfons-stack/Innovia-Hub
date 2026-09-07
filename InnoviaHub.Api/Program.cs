@@ -1,11 +1,13 @@
 using InnoviaHub.Api.Data;
-using InnoviaHub.Api.Collections;
+using InnoviaHub.Api.Extensions;
+using InnoviaHub.Api.Handler;
 using InnoviaHub.DataAccess;
 using InnoviaHub.DataAccess.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using InnoviaHub.Api.Hubs;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,13 +38,15 @@ builder.Services.AddApplicationServices();
 builder.Services.AddApplicationRepositories();
 builder.Services.AddSignalR();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 var app = builder.Build();
-
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
@@ -55,9 +59,12 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
-//app.UseHttpsRedirection();
+app.UseExceptionHandler();
+
+app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
 app.UseAuthentication();

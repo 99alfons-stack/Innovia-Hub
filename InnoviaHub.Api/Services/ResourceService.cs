@@ -1,8 +1,8 @@
-﻿using InnoviaHub.Api.Services.Interfaces;
+﻿using InnoviaHub.Api.Mappings;
+using InnoviaHub.Api.Services.Interfaces;
 using InnoviaHub.DataAccess.Entities;
 using InnoviaHub.DataAccess.Repositories.Interfaces;
 using InnoviaHub.Shared.DTOs.Resource;
-using InnoviaHub.Shared.DTOs.ResourceType;
 
 namespace InnoviaHub.Api.Services;
 
@@ -15,20 +15,7 @@ public class ResourceService(IResourceRepository resourceRepository,
         return
         [
             .. resources
-                .Select(r => new ResourceDto
-                {
-                    Id = r.Id,
-                    Name = r.Name,
-                    ResourceType = new ResourceTypeDto
-                    {
-                        Id = r.ResourceType.Id,
-                        Name = r.ResourceType.Name,
-                        Description = r.ResourceType.Description
-                    },
-                    IsActive = r.IsActive,
-                    Capacity = r.Capacity,
-                    CreatedAt = r.CreatedAt
-                })
+                .Select(r => r.ToDto())
         ];
     }
 
@@ -39,20 +26,7 @@ public class ResourceService(IResourceRepository resourceRepository,
         if (resource is null)
             return null;
 
-        return new ResourceDto
-        {
-            Id = resource.Id,
-            Name = resource.Name,
-            ResourceType = new ResourceTypeDto
-            {
-                Id = resource.ResourceType.Id,
-                Name = resource.ResourceType.Name,
-                Description = resource.ResourceType.Description
-            },
-            IsActive = resource.IsActive,
-            Capacity = resource.Capacity,
-            CreatedAt = resource.CreatedAt
-        };
+        return resource.ToDto();
     }
 
     public async Task<ResourceDto> CreateAsync(CreateResourceDto dto)
@@ -74,20 +48,7 @@ public class ResourceService(IResourceRepository resourceRepository,
         
         await resourceRepository.AddAsync(resource);
         
-        return new ResourceDto
-        {
-            Id = resource.Id,
-            Name = resource.Name,
-            ResourceType = new ResourceTypeDto
-            {
-                Id = resourceType.Id,
-                Name = resourceType.Name,
-                Description = resourceType.Description
-            },
-            IsActive = resource.IsActive,
-            Capacity = resource.Capacity,
-            CreatedAt = resource.CreatedAt
-        };
+        return resource.ToDto();
     }
 
     public async Task<ResourceDto> UpdateAsync(Guid id, UpdateResourceDto dto)
@@ -108,20 +69,7 @@ public class ResourceService(IResourceRepository resourceRepository,
         resource.Capacity = dto.Capacity;
         await resourceRepository.UpdateAsync(resource);
 
-        return new ResourceDto
-        {
-            Id = resource.Id,
-            Name = resource.Name,
-            ResourceType = new ResourceTypeDto
-            {
-                Id = resourceType.Id,
-                Name = resourceType.Name,
-                Description = resourceType.Description
-            },
-            IsActive = resource.IsActive,
-            Capacity = resource.Capacity,
-            CreatedAt = resource.CreatedAt
-        };
+        return resource.ToDto();
     }
 
     public async Task<bool> DeleteAsync(Guid id)

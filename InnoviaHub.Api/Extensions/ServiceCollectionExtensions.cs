@@ -1,10 +1,8 @@
 ﻿using InnoviaHub.Api.Services;
 using InnoviaHub.Api.Services.Interfaces;
 
-namespace InnoviaHub.Api.Collections;
+namespace InnoviaHub.Api.Extensions;
 
-// Samlingspunkt för alla services
-// Lägg in services här i en service.AddScoped<Interface, Klass>
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
@@ -13,6 +11,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IResourceTypeService, ResourceTypeService>();
         services.AddScoped<IResourceService, ResourceService>();
+        services.AddScoped<IBookingService, BookingService>();
         
         return services;
     }

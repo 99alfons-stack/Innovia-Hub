@@ -8,8 +8,8 @@ public class ResourceRepository(InnoviaHubDbContext context) : IResourceReposito
 {
     public async Task<IEnumerable<Resource>> GetAllAsync()
     {
-        return await context.Resources.
-            Include(rt => rt.ResourceType)
+        return await context.Resources
+            .Include(rt => rt.ResourceType)
             .ToListAsync();
     }
 

@@ -8,7 +8,8 @@ public class ResourceTypeRepository(InnoviaHubDbContext context) : IResourceType
 {
     public async Task<IEnumerable<ResourceType>> GetAllAsync()
     {
-        return await context.ResourceTypes.ToListAsync();
+        return await context.ResourceTypes
+            .ToListAsync();
     }
 
     public async Task<ResourceType?> GetByIdAsync(Guid id)

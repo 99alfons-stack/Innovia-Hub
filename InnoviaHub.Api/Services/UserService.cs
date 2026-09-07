@@ -1,6 +1,8 @@
-﻿using InnoviaHub.Api.Services.Interfaces;
+﻿using InnoviaHub.Api.Mappings;
+using InnoviaHub.Api.Services.Interfaces;
 using InnoviaHub.DataAccess.Entities;
 using InnoviaHub.Shared.DTOs.User;
+using InnoviaHub.Shared.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,16 +18,8 @@ public class UserService(UserManager<User> userManager) : IUserService
 
         foreach (var user in users)
         {
-            var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
-
-            result.Add(new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email ?? string.Empty,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAdmin = isAdmin
-            });
+            var isAdmin = await userManager.IsInRoleAsync(user, nameof(UserRoles.Admin));
+            result.Add(user.ToDto(isAdmin));
         }
         
         return result;
@@ -38,16 +32,9 @@ public class UserService(UserManager<User> userManager) : IUserService
         if (user is null)
             return null;
         
-        var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
+        var isAdmin = await userManager.IsInRoleAsync(user, nameof(UserRoles.Admin));
         
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email ?? string.Empty,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            IsAdmin = isAdmin
-        };
+        return user.ToDto(isAdmin);
     }
 
     public async Task<UserDto> CreateAsync(CreateUserDto dto)
@@ -69,21 +56,14 @@ public class UserService(UserManager<User> userManager) : IUserService
         var result = await userManager.CreateAsync(user, dto.Password);
 
         if (!result.Succeeded)
-        {
-            var errors = string.Join(", ", result.Errors.Select(x => x.Description));
-            throw new InvalidOperationException(errors);
-        }
+            throw new InvalidOperationException("COULD_NOT_CREATE_USER");
         
-        await userManager.AddToRoleAsync(user, "Member");
+        var role = await userManager.AddToRoleAsync(user, nameof(UserRoles.Member));
+        
+        if (!role.Succeeded)
+            throw new InvalidOperationException("COULD_NOT_ASSIGN_ROLE");
 
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            IsAdmin = false
-        };
+        return user.ToDto(false);
     }
 
     public async Task<UserDto?> UpdateAsync(Guid id, UpdateUserDto dto)
@@ -103,16 +83,9 @@ public class UserService(UserManager<User> userManager) : IUserService
         if (!result.Succeeded)
             throw new InvalidOperationException("COULD_NOT_UPDATE_USER");
         
-        var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
+        var isAdmin = await userManager.IsInRoleAsync(user, nameof(UserRoles.Admin));
 
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            IsAdmin = isAdmin
-        };
+        return user.ToDto(isAdmin);
     }
 
     public async Task<bool> DeleteAsync(Guid id)
@@ -124,6 +97,9 @@ public class UserService(UserManager<User> userManager) : IUserService
         
         var result = await userManager.DeleteAsync(user);
         
-        return result.Succeeded;
+        if (!result.Succeeded)
+            throw new InvalidOperationException("COULD_NOT_DELETE_USER");
+        
+        return true;
     }
 }

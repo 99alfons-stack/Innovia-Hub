@@ -1,5 +1,6 @@
 ﻿using InnoviaHub.Api.Services.Interfaces;
 using InnoviaHub.Shared.DTOs.Auth;
+using InnoviaHub.Shared.DTOs.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,16 +12,24 @@ public class AuthController(IAuthService authService) : ControllerBase
 {
     [Authorize]
     [HttpGet("current-user")]
-    public async Task<IActionResult> GetCurrentUser()
+    public async Task<ActionResult<UserDto>> GetCurrentUser()
     {
         var result = await authService.GetCurrentUserAsync(User);
+
+        if (result is null)
+            return Unauthorized();
+
         return Ok(result);
     }
-    
+
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginDto dto)
+    public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto dto)
     {
         var result = await authService.LoginAsync(dto);
+
+        if (result is null)
+            return Unauthorized();
+
         return Ok(result);
     }
 
@@ -29,7 +38,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     public async Task<IActionResult> Logout()
     {
         await authService.LogoutAsync();
-        
+
         return NoContent();
     }
 }

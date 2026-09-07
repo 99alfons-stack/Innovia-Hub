@@ -5,6 +5,8 @@ using InnoviaHub.DataAccess;
 using InnoviaHub.DataAccess.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using InnoviaHub.Api.Hubs;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +36,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddApplicationServices();
 builder.Services.AddApplicationRepositories();
+builder.Services.AddSignalR();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

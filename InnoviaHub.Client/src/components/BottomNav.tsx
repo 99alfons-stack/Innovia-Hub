@@ -2,15 +2,16 @@ export type View = "landing" | "booking" | "admin" | "login";
 
 type BottomNavProps = {
   currentView: View;
+  isAdmin: boolean;
   onNavigate: (view: View) => void;
   onLogout: () => void;
 };
 
-export default function BottomNav({ currentView, onNavigate, onLogout }: BottomNavProps) {
+export default function BottomNav({ currentView, isAdmin, onNavigate, onLogout }: BottomNavProps) {
   const items: { id: View; label: string }[] = [
     { id: "landing", label: "Landingssida" },
     { id: "booking", label: "Bokningssystem" },
-    { id: "admin", label: "Adminpanel" },
+    ...(isAdmin ? [{ id: "admin" as View, label: "Adminpanel" }] : []),
   ];
 
   return (

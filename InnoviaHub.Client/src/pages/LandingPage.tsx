@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import type { LoginResponse } from "../../services/authService";
+import UserAvatar from "../components/UserAvatar";
 
 const resources = [
   { label: "Drop-in skrivbord", total: 15, booked: 9, icon: "⬜", color: "#3b82f6" },
@@ -34,7 +36,7 @@ export function LiveDot({ color = "#00d4aa" }: { color?: string }) {
   );
 }
 
-export default function LandingPage({ onBook }: { onBook: () => void }) {
+export default function LandingPage({ onBook, user }: { onBook: () => void; user: LoginResponse | null }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -67,6 +69,10 @@ export default function LandingPage({ onBook }: { onBook: () => void }) {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <UserAvatar user={user} />
+          <span className="text-sm hidden sm:block" style={{ color: "#7a94aa" }}>
+            Inloggad som <span style={{ color: "#e2eaf2" }}>{user?.firstName} {user?.lastName}</span>
+          </span>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: "#0d1824", border: "1px solid #1e3347" }}>
             <LiveDot />
             <span className="mono text-xs" style={{ color: "#7a94aa" }}>{hour}</span>

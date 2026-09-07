@@ -12,6 +12,7 @@ export type LoginResponse ={
 };
 
 const API_URL="http://localhost:5193/api/Auth/login";
+const LOGOUT_URL="http://localhost:5193/api/Auth/logout";
 
 export async function login(credentials:LoginRequest):Promise<LoginResponse>
 {
@@ -34,4 +35,15 @@ export async function login(credentials:LoginRequest):Promise<LoginResponse>
     }
 
     return JSON.parse(responseText) as LoginResponse;
+}
+
+export async function logout(): Promise<void> {
+    const response = await fetch(LOGOUT_URL, {
+        method: "POST",
+        credentials: "include",
+    });
+
+    if (!response.ok && response.status !== 401) {
+        throw new Error("Utloggningen misslyckades");
+    }
 }

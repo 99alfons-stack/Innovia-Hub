@@ -1,10 +1,10 @@
 using InnoviaHub.Api.Data;
-using InnoviaHub.Api.Collections;
+using InnoviaHub.Api.Extensions;
+using InnoviaHub.Api.Handler;
 using InnoviaHub.DataAccess;
 using InnoviaHub.DataAccess.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +34,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddApplicationServices();
 builder.Services.AddApplicationRepositories();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -55,7 +58,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-//app.UseHttpsRedirection();
+app.UseExceptionHandler();
+
+app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
 app.UseAuthentication();

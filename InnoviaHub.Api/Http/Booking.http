@@ -1,0 +1,38 @@
+﻿@BASE_URL = http://localhost:5193
+
+@BOOKING_ID = 61e632ef-11fe-4617-986c-3b74ac2a7d1f
+@RESOURCE_ID = 9fbd0e86-8264-493a-8434-feda6d9611f5
+@START_TIME = 2026-09-07T12:00:00Z
+@END_TIME = 2026-09-07T13:00:00Z
+
+### BOOKINGS - Get all bookings
+GET {{BASE_URL}}/api/Bookings
+Accept: application/json
+
+### BOOKING - Get booking
+GET {{BASE_URL}}/api/Bookings/{{BOOKING_ID}}
+Accept: application/json
+
+### CREATE - Create booking
+POST {{BASE_URL}}/api/Bookings/
+Content-Type: application/json
+
+{
+  "resourceId": "{{RESOURCE_ID}}",
+  "startTime": "{{START_TIME}}",
+  "endTime": "{{END_TIME}}"
+}
+
+### UPDATE - Update booking
+PUT {{BASE_URL}}/api/Bookings/{{BOOKING_ID}}
+Content-Type: application/json
+
+{
+  "resourceId": "{{RESOURCE_ID}}",
+  "startTime": "{{START_TIME}}",
+  "endTime": "{{END_TIME}}"
+}
+
+### CANCEL - Cancel booking
+PATCH {{BASE_URL}}/api/Bookings/{{BOOKING_ID}}/cancel
+Content-Type: application/json

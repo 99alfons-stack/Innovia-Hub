@@ -11,11 +11,9 @@
 GET {{BASE_URL}}/api/Resource
 Accept: application/json
 
-
 ### RESOURCE - Get resource by ID
 GET {{BASE_URL}}/api/Resource/{{RESOURCE_ID}}
 Accept: application/json
-
 
 ### CREATE - Create resource
 POST {{BASE_URL}}/api/Resource
@@ -27,7 +25,6 @@ Content-Type: application/json
   "capacity": {{CAPACITY}}
 }
 
-
 ### UPDATE - Update resource
 PUT {{BASE_URL}}/api/Resource/{{RESOURCE_ID}}
 Content-Type: application/json
@@ -38,7 +35,6 @@ Content-Type: application/json
   "capacity": {{CAPACITY}},
   "isActive": {{IS_ACTIVE}}
 }
-
 
 ### DELETE - Delete resource
 DELETE {{BASE_URL}}/api/Resource/{{RESOURCE_ID}}

@@ -47,10 +47,12 @@ export async function createUser(user: CreateUserRequest): Promise<UserSummary>{
         headers: {
             "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(user),
     });
     if (!response.ok) {
-        throw new Error("Kunde inte skapa medlem");
+        const errorMessage = await response.text();
+        throw new Error(errorMessage || `Kunde inte skapa medlem (${response.status})`);
     }
     const createdUser: UserApiModel = await response.json();
 
@@ -66,6 +68,7 @@ export async function createUser(user: CreateUserRequest): Promise<UserSummary>{
 export async function deleteUser(id: string): Promise<void> {
     const response = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
+        credentials: "include",
     });
 
     if (!response.ok) {

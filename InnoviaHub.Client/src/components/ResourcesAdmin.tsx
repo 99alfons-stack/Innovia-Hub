@@ -14,10 +14,10 @@ import {
 type ResourceForm = {
   name: string;
   resourceTypeId: string;
-  capacity: number;
+  capacity: number | "";
 };
 
-const emptyForm: ResourceForm = { name: "", resourceTypeId: "", capacity: 1 };
+const emptyForm: ResourceForm = { name: "", resourceTypeId: "", capacity: "" };
 const fieldStyle = {
   width: "100%",
   boxSizing: "border-box" as const,
@@ -114,7 +114,7 @@ function ResourceModal({
                 onChange({ ...form, name: event.target.value })
               }
               style={{ ...fieldStyle, display: "block", marginTop: 8 }}
-              placeholder="T.ex. Mötesrum A"
+              placeholder="T.ex. Mötesrum"
             />
           </label>
           <label style={{ color: "#7a94aa", fontSize: 14 }}>
@@ -141,9 +141,14 @@ function ResourceModal({
               required
               type="number"
               min="1"
+              placeholder="T.ex. 15" 
               value={form.capacity}
               onChange={(event) =>
-                onChange({ ...form, capacity: Number(event.target.value) })
+                onChange({
+                  ...form,
+                  capacity:
+                    event.target.value === "" ? "" : Number(event.target.value),
+                })
               }
               style={{ ...fieldStyle, display: "block", marginTop: 8 }}
             />
@@ -212,9 +217,27 @@ export default function ResourcesAdmin() {
     setAlert("");
   };
 
+  const openResourceForm = async () => {
+    try {
+      const loadedTypes = await getAllResourceTypes();
+      setTypes(loadedTypes);
+      setForm(emptyForm);
+      setEditing(null);
+      setAlert("");
+      setFormOpen(true);
+    } catch {
+      setAlert("Kunde inte hämta resurstyper")
+    }
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.resourceTypeId || form.capacity < 1) {
+    if (
+      !form.name.trim() ||
+      !form.resourceTypeId ||
+      form.capacity === "" ||
+      form.capacity < 1
+    ) {
       setAlert("Fyll i alla fält");
       return;
     }
@@ -222,6 +245,7 @@ export default function ResourcesAdmin() {
       if (editing) {
         await updateResource(editing.id, {
           ...form,
+          capacity: form.capacity,
           name: form.name.trim(),
           isActive: editing.isActive,
         });
@@ -232,13 +256,20 @@ export default function ResourcesAdmin() {
           setResources((current) =>
             current.map((resource) =>
               resource.id === editing.id
-                ? { ...resource, ...form, name: form.name.trim(), resourceType }
+                ? {
+                    ...resource,
+                    ...form,
+                    capacity: Number(form.capacity),
+                    name: form.name.trim(),
+                    resourceType,
+                  }
                 : resource,
             ),
           );
       } else {
         const createdResource = await createResource({
           ...form,
+          capacity: form.capacity,
           name: form.name.trim(),
         });
         setResources((current) => [createdResource, ...current]);
@@ -275,14 +306,9 @@ export default function ResourcesAdmin() {
           Resurser
         </h1>
         <button
-          onClick={() => {
-            setForm(emptyForm);
-            setEditing(null);
-            setAlert("");
-            setFormOpen(true);
-          }}
+          onClick={openResourceForm}
           className="px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: "#00d4aa", color: "#080e14" }}
+          style={{ background: "#00d4aa", color: "#080e14", cursor: "pointer"}}
         >
           + Ny resurs
         </button>
@@ -350,6 +376,7 @@ export default function ResourcesAdmin() {
                         background: "#111e2d",
                         color: "#7a94aa",
                         border: "1px solid #1e3347",
+                        cursor: "pointer"
                       }}
                     >
                       Redigera
@@ -361,6 +388,7 @@ export default function ResourcesAdmin() {
                         background: "rgba(244,63,94,0.1)",
                         color: "#f43f5e",
                         border: "1px solid rgba(244,63,94,0.25)",
+                        cursor: "pointer"
                       }}
                     >
                       Ta bort

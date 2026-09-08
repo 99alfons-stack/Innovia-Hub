@@ -28,7 +28,9 @@ const RESOURCE_TYPES_API_URL = "http://localhost:5193/api/ResourceTypes";
 
 //Hämta alla resurser
 export async function getAllResources(): Promise<Resource[]> {
-    const response = await fetch(RESOURCE_API_URL)
+    const response = await fetch(RESOURCE_API_URL, {
+        credentials: "include",
+    })
 
     if (!response.ok) {
         throw new Error("Kunde inte hämta resurser");
@@ -37,7 +39,9 @@ export async function getAllResources(): Promise<Resource[]> {
 }
 
 export async function getAllResourceTypes(): Promise<ResourceType[]> {
-    const response = await fetch(RESOURCE_TYPES_API_URL);
+    const response = await fetch(RESOURCE_TYPES_API_URL, {
+        credentials: "include"
+    });
 
     if (!response.ok) {
         throw new Error("Kunde inte hämta resurskategorier");
@@ -52,6 +56,7 @@ export async function createResource(
 ): Promise<Resource> {
     const response = await fetch(RESOURCE_API_URL, {
         method: "POST",
+        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -71,6 +76,7 @@ export async function updateResource(
 ): Promise<void> {
     const response = await fetch(`${RESOURCE_API_URL}/${id}`, {
         method: "PUT",
+        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -85,6 +91,7 @@ export async function updateResource(
 export async function deleteResource(id: string): Promise<void> {
     const response = await fetch(`${RESOURCE_API_URL}/${id}`, {
         method: "DELETE",
+        credentials: "include"
     });
 
     if (!response.ok) {

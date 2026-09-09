@@ -34,7 +34,7 @@ const RESOURCE_TYPES_API_URL = "http://localhost:5193/api/ResourceTypes";
 export async function getAllResources(): Promise<Resource[]> {
     const response = await fetch(RESOURCE_API_URL, {
         credentials: "include",
-    })
+    });
 
     if (!response.ok) {
         throw new Error("Kunde inte hämta resurser");

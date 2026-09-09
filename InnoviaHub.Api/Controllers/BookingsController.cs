@@ -4,13 +4,17 @@ using InnoviaHub.Shared.DTOs.Booking;
 using InnoviaHub.Shared.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using InnoviaHub.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace InnoviaHub.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class BookingsController(IBookingService bookingService) : ControllerBase
+public class BookingsController(
+    IBookingService bookingService,
+    IHubContext<NotificationHub> hubContext) : ControllerBase
 {
     private Guid GetCurrentUserId()
     {
@@ -49,10 +53,15 @@ public class BookingsController(IBookingService bookingService) : ControllerBase
             userId,
             dto
         );
-        
+
+        await hubContext.Clients.All.SendAsync(
+            "BookingCreated",
+            booking);
+
         return CreatedAtAction(
-            nameof(GetById), 
-            new { id = booking.Id }, booking);
+            nameof(GetById),
+            new { id = booking.Id },
+            booking);
     }
 
     [HttpPut("{id}")]

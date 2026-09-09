@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { LoginResponse } from "../../services/authService";
+import { createBooking } from "../../services/bookingApiService";
+import { getAllResources, type Resource as ApiResource } from "../../services/resourceService";
 import UserAvatar from "../components/UserAvatar";
+import {
+  connection,
+  startNotificationConnection,
+} from "../../services/notificationService";
 
 type ResourceType = "desk" | "room" | "vr" | "ai";
 type Step = "select" | "configure" | "confirm" | "done";
@@ -16,28 +22,6 @@ interface Resource {
   icon: string;
 }
 
-const allResources: Resource[] = [
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `desk-${i + 1}`,
-    type: "desk" as ResourceType,
-    label: `Skrivbord ${i + 1}`,
-    sub: i < 5 ? "Zon A – Fönster" : i < 10 ? "Zon B – Mitten" : "Zon C – Tyst",
-    status: (i < 9 ? "booked" : "available") as Resource["status"],
-    features: ["Skärm", "USB-C", "Ergonomisk stol"],
-    color: "#3b82f6",
-    icon: "⬜",
-  })),
-  { id: "room-a", type: "room", label: "Mötesrum A", sub: "6 pers · Projektor · Whiteboard", status: "booked", features: ["4K-projektor", "Whiteboard", "Videokonferens", "Luftkonditionering"], color: "#00d4aa", icon: "▪" },
-  { id: "room-b", type: "room", label: "Mötesrum B", sub: "4 pers · TV-skärm", status: "available", features: ["65\" TV", "HDMI", "Videokonferens"], color: "#00d4aa", icon: "▪" },
-  { id: "room-c", type: "room", label: "Mötesrum C", sub: "10 pers · Workshop", status: "available", features: ["Whiteboard x2", "4K-projektor", "Videokonferens", "Kök"], color: "#00d4aa", icon: "▪" },
-  { id: "room-d", type: "room", label: "Mötesrum D", sub: "3 pers · Fokusrum", status: "reserved", features: ["TV 43\"", "HDMI", "Tyst zon"], color: "#00d4aa", icon: "▪" },
-  { id: "vr-1", type: "vr", label: "VR-headset #1", sub: "Meta Quest 3 · Laddat 100%", status: "booked", features: ["Meta Quest 3", "Hand tracking", "PC-VR via streaming"], color: "#a855f7", icon: "◈" },
-  { id: "vr-2", type: "vr", label: "VR-headset #2", sub: "Meta Quest 3 · Laddat 87%", status: "booked", features: ["Meta Quest 3", "Hand tracking"], color: "#a855f7", icon: "◈" },
-  { id: "vr-3", type: "vr", label: "VR-headset #3", sub: "Meta Quest Pro · Laddat 94%", status: "available", features: ["Meta Quest Pro", "Eye tracking", "PC-VR via streaming"], color: "#a855f7", icon: "◈" },
-  { id: "vr-4", type: "vr", label: "VR-headset #4", sub: "Meta Quest 3 · Laddat 62%", status: "available", features: ["Meta Quest 3", "Hand tracking"], color: "#a855f7", icon: "◈" },
-  { id: "ai-1", type: "ai", label: "AI-server", sub: "NVIDIA H100 · 80GB VRAM", status: "booked", features: ["NVIDIA H100", "80GB VRAM", "100 GbE nätverk", "CUDA 12.3", "Jupyter-åtkomst"], color: "#f59e0b", icon: "◆" },
-];
-
 const typeFilters = [
   { id: "all", label: "Alla" },
   { id: "desk", label: "Skrivbord" },
@@ -49,16 +33,105 @@ const typeFilters = [
 const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
 const durations = ["1 timme", "2 timmar", "3 timmar", "Heldag"];
 
+function toResourceType(name: string): ResourceType {
+  const normalizedName = name.toLowerCase();
+
+  if (normalizedName.includes("rum") || normalizedName.includes("room")) return "room";
+  if (normalizedName.includes("vr")) return "vr";
+  if (normalizedName.includes("ai") || normalizedName.includes("server")) return "ai";
+  return "desk";
+}
+
+function mapApiResource(resource: ApiResource): Resource {
+  const type = toResourceType(resource.resourceType.name);
+  const colors: Record<ResourceType, string> = {
+    desk: "#3b82f6",
+    room: "#00d4aa",
+    vr: "#a855f7",
+    ai: "#f59e0b",
+  };
+  const icons: Record<ResourceType, string> = {
+    desk: "⬜",
+    room: "▪",
+    vr: "◈",
+    ai: "◆",
+  };
+
+  return {
+    id: resource.id,
+    type,
+    label: resource.name,
+    sub: `${resource.capacity} ${resource.capacity === 1 ? "plats" : "platser"}`,
+    status: "available",
+    features: [],
+    color: colors[type],
+    icon: icons[type],
+  };
+}
+
 export default function BookingPage({ user }: { user: LoginResponse | null }) {
   const [filter, setFilter] = useState("all");
+  const [resources, setResources] = useState<Resource[]>([]);
   const [selected, setSelected] = useState<Resource | null>(null);
   const [step, setStep] = useState<Step>("select");
   const [timeSlot, setTimeSlot] = useState("10:00");
   const [duration, setDuration] = useState("2 timmar");
   const [purpose, setPurpose] = useState("");
   const [date, setDate] = useState("2025-11-18");
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
-  const filtered = allResources.filter(
+  useEffect(() => {
+    async function loadResources() {
+      try {
+        // Resource IDs from the API are GUIDs, which the booking endpoint requires.
+        const apiResources = await getAllResources();
+        setResources(apiResources.filter((resource) => resource.isActive).map(mapApiResource));
+      } catch (error) {
+        setBookingError(error instanceof Error ? error.message : "Kunde inte hämta resurser");
+      }
+    }
+
+    loadResources();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function connectToNotifications() {
+      try {
+        await startNotificationConnection();
+
+        if (!isMounted) return;
+
+        connection.on("BookingCreated", (booking) => {
+          // SignalR-eventet innehåller den bokade resursens databasID.
+          const resourceId = booking.resource?.id;
+
+          if (!resourceId) return;
+
+          setResources((currentResources) =>
+            currentResources.map((resource) =>
+              resource.id === resourceId
+                ? { ...resource, status: "booked" }
+                : resource,
+            ),
+          );
+        });
+      } catch (error) {
+        console.error("Kunde inte ansluta till SignalR:", error);
+      }
+    }
+
+    connectToNotifications();
+
+    return () => {
+      isMounted = false;
+      connection.off("BookingCreated");
+    };
+  }, []);
+
+  const filtered = resources.filter(
     (r) => filter === "all" || r.type === filter
   );
 
@@ -72,6 +145,32 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
     setSelected(null);
     setStep("select");
     setPurpose("");
+    setBookingError(null);
+  }
+
+  async function confirmBooking() {
+    if (!selected) return;
+
+    const startTime = new Date(`${date}T${timeSlot}:00`);
+    const durationHours = duration === "Heldag" ? 8 : Number.parseInt(duration, 10);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + durationHours);
+
+    setIsBooking(true);
+    setBookingError(null);
+
+    try {
+      await createBooking({
+        resourceId: selected.id,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+      setStep("done");
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : "Bokningen kunde inte skapas");
+    } finally {
+      setIsBooking(false);
+    }
   }
 
   return (
@@ -417,6 +516,12 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
               </p>
             </div>
 
+            {bookingError && (
+              <p className="text-sm mb-6" style={{ color: "#f43f5e" }}>
+                {bookingError}
+              </p>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={reset}
@@ -426,13 +531,14 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
                 Avbryt
               </button>
               <button
-                onClick={() => setStep("done")}
+                onClick={confirmBooking}
+                disabled={isBooking}
                 className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all duration-150"
-                style={{ background: "#00d4aa", color: "#080e14", fontFamily: "Outfit, sans-serif" }}
+                style={{ background: "#00d4aa", color: "#080e14", fontFamily: "Outfit, sans-serif", opacity: isBooking ? 0.6 : 1 }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#00f0c4")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#00d4aa")}
               >
-                Bekräfta bokning ✓
+                {isBooking ? "Skapar bokning..." : "Bekräfta bokning ✓"}
               </button>
             </div>
           </div>

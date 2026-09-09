@@ -71,5 +71,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");// med detta får klienten anslutning till loclahosten
 
 app.Run();

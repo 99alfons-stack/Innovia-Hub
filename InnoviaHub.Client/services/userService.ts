@@ -24,7 +24,10 @@ const API_URL = "http://localhost:5193/api/Users";
 
 //Hämta alla users
 export async function getAllUsers(): Promise<UserSummary[]> {
-    const response = await fetch(API_URL);
+    const response = await fetch(API_URL, {
+        method: "GET",
+        credentials: "include"
+    }); 
 
     if (!response.ok) {
         throw new Error("Kunde inte hämta användare");

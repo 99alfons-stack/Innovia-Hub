@@ -1,23 +1,22 @@
 import { useEffect, useState } from "react";
 import Alert from "./Alert";
 import AdminStatusBadge from "./AdminStatusBadge";
-import {
-  createResource,
-  deleteResource,
-  getAllResourceTypes,
-  getAllResources,
-  updateResource,
-  type Resource,
-  type ResourceType,
-} from "../../services/resourceService";
+import { createResource, createResourceType, deleteResource, getAllResourceTypes, getAllResources,
+  updateResource, type Resource, type ResourceType, type ResourceZone, } from "../../services/resourceService";
 
 type ResourceForm = {
   name: string;
   resourceTypeId: string;
-  capacity: number;
+  zone: ResourceZone | "";
+  capacity: number | "";
 };
 
-const emptyForm: ResourceForm = { name: "", resourceTypeId: "", capacity: 1 };
+const emptyForm: ResourceForm = {
+  name: "",
+  resourceTypeId: "",
+  zone: "",
+  capacity: "",
+};
 const fieldStyle = {
   width: "100%",
   boxSizing: "border-box" as const,
@@ -34,6 +33,10 @@ function ResourceModal({
   types,
   editing,
   alert,
+  newTypeName,
+  creatingType,
+  onNewTypeNameChange,
+  onAddResourceType,
   onChange,
   onSubmit,
   onClose,
@@ -43,10 +46,14 @@ function ResourceModal({
   types: ResourceType[];
   editing: boolean;
   alert: string;
+  newTypeName: string;
+  creatingType: boolean;
   onChange: (form: ResourceForm) => void;
   onSubmit: (event: React.FormEvent) => void;
   onClose: () => void;
   onClearAlert: () => void;
+  onNewTypeNameChange: (name: string) => void;
+  onAddResourceType: () => void;
 }) {
   return (
     <div
@@ -114,7 +121,7 @@ function ResourceModal({
                 onChange({ ...form, name: event.target.value })
               }
               style={{ ...fieldStyle, display: "block", marginTop: 8 }}
-              placeholder="T.ex. Mötesrum A"
+              placeholder="T.ex. Mötesrum"
             />
           </label>
           <label style={{ color: "#7a94aa", fontSize: 14 }}>
@@ -134,16 +141,62 @@ function ResourceModal({
                 </option>
               ))}
             </select>
+            
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <input
+                value={newTypeName}
+                onChange={(event) => onNewTypeNameChange(event.target.value)}
+                placeholder="T.ex. Sensor"
+                style={{ ...fieldStyle, marginTop: 0 }}
+              />
+
+              <button type="button" onClick={onAddResourceType} disabled={creatingType}
+              style={{whiteSpace: "nowrap", background: "#111e2d", border: "1px solid #1e3347",
+                borderRadius: 10, padding: "0 12px", color:"#00d4aa", cursor: creatingType ? "wait" : "pointer",
+              }}>
+                {creatingType ? "Skapar..." : "+ Ny typ"}
+              </button>
+            </div>
+
           </label>
+
+          <label style={{ color: "#7a94aa", fontSize: 14 }}>
+            Zon
+            <select
+              required
+              value={form.zone}
+              onChange={(event) =>
+                onChange({
+                  ...form,
+                  zone:
+                    event.target.value === ""
+                      ? ""
+                      : (Number(event.target.value) as ResourceZone),
+                })
+              }
+              style={{ ...fieldStyle, display: "block", marginTop: 8 }}
+            >
+              <option value="">Välj zon</option>
+              <option value={0}>Zon A</option>
+              <option value={1}>Zon B</option>
+              <option value={2}>Zon C</option>
+            </select>
+          </label>
+
           <label style={{ color: "#7a94aa", fontSize: 14 }}>
             Kapacitet
             <input
               required
               type="number"
               min="1"
+              placeholder="T.ex. 15" 
               value={form.capacity}
               onChange={(event) =>
-                onChange({ ...form, capacity: Number(event.target.value) })
+                onChange({
+                  ...form,
+                  capacity:
+                    event.target.value === "" ? "" : Number(event.target.value),
+                })
               }
               style={{ ...fieldStyle, display: "block", marginTop: 8 }}
             />
@@ -195,6 +248,8 @@ export default function ResourcesAdmin() {
   const [deleting, setDeleting] = useState<Resource | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [alert, setAlert] = useState("");
+  const [newTypeName, setNewTypeName] = useState("");
+  const [creatingType, setCreatingType] = useState(false);
 
   useEffect(() => {
     Promise.all([getAllResources(), getAllResourceTypes()])
@@ -209,20 +264,72 @@ export default function ResourcesAdmin() {
     setFormOpen(false);
     setEditing(null);
     setForm(emptyForm);
+    setNewTypeName("");
     setAlert("");
   };
 
+  const openResourceForm = async () => {
+    try {
+      const loadedTypes = await getAllResourceTypes();
+      setTypes(loadedTypes);
+      setForm(emptyForm);
+      setEditing(null);
+      setAlert("");
+      setFormOpen(true);
+    } catch {
+      setAlert("Kunde inte hämta resurstyper")
+    }
+  }
+
+  const addResourceType = async () => {
+    const name = newTypeName.trim();
+
+    if (!name) {
+      setAlert("Ange ett namn på resurstypen");
+      return;
+    }
+
+    try {
+      setCreatingType(true);
+      const createdType = await createResourceType(name, "");
+       setTypes((current) => [...current, createdType]);
+
+        setForm((current) => ({
+      ...current,
+      resourceTypeId: createdType.id,
+   }));
+
+      setNewTypeName("");
+      setAlert("");
+    } catch {
+      setAlert("Kunde inte skapa resurstyp")
+    } finally {
+      setCreatingType(false)
+    }
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.resourceTypeId || form.capacity < 1) {
+    if (
+      !form.name.trim() ||
+      !form.resourceTypeId ||
+      form.zone === "" ||
+      form.capacity === "" ||
+      form.capacity < 1
+    ) {
       setAlert("Fyll i alla fält");
       return;
     }
+    const resourceData = {
+      name: form.name.trim(),
+      resourceTypeId: form.resourceTypeId,
+      zone: form.zone as ResourceZone,
+      capacity: form.capacity,
+    };
     try {
       if (editing) {
         await updateResource(editing.id, {
-          ...form,
-          name: form.name.trim(),
+          ...resourceData,
           isActive: editing.isActive,
         });
         const resourceType = types.find(
@@ -232,15 +339,16 @@ export default function ResourcesAdmin() {
           setResources((current) =>
             current.map((resource) =>
               resource.id === editing.id
-                ? { ...resource, ...form, name: form.name.trim(), resourceType }
+                ? {
+                    ...resource,
+                    ...resourceData,
+                    resourceType,
+                  }
                 : resource,
             ),
           );
       } else {
-        const createdResource = await createResource({
-          ...form,
-          name: form.name.trim(),
-        });
+        const createdResource = await createResource(resourceData);
         setResources((current) => [createdResource, ...current]);
       }
       closeForm();
@@ -275,14 +383,9 @@ export default function ResourcesAdmin() {
           Resurser
         </h1>
         <button
-          onClick={() => {
-            setForm(emptyForm);
-            setEditing(null);
-            setAlert("");
-            setFormOpen(true);
-          }}
+          onClick={openResourceForm}
           className="px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: "#00d4aa", color: "#080e14" }}
+          style={{ background: "#00d4aa", color: "#080e14", cursor: "pointer"}}
         >
           + Ny resurs
         </button>
@@ -294,7 +397,7 @@ export default function ResourcesAdmin() {
         <table className="w-full">
           <thead>
             <tr style={{ background: "#111e2d" }}>
-              {["Resurs", "Typ", "Status", "Kapacitet", "Åtgärd"].map(
+              {["Resurs", "Typ", "Zon", "Status", "Kapacitet", "Åtgärd"].map(
                 (heading) => (
                   <th
                     key={heading}
@@ -322,6 +425,11 @@ export default function ResourcesAdmin() {
                 <td className="px-4 py-3 text-sm" style={{ color: "#7a94aa" }}>
                   {resource.resourceType.name}
                 </td>
+                <td className="px-4 py-3 text-sm" style={{ color: "#7a94aa" }}>
+                  {resource.zone === null
+                    ? "Ingen zon"
+                    : `Zon ${String.fromCharCode(65 + resource.zone)}`}
+                </td>
                 <td className="px-4 py-3">
                   <AdminStatusBadge
                     status={resource.isActive ? "active" : "inactive"}
@@ -341,6 +449,7 @@ export default function ResourcesAdmin() {
                         setForm({
                           name: resource.name,
                           resourceTypeId: resource.resourceType.id,
+                          zone: resource.zone ?? "",
                           capacity: resource.capacity,
                         });
                         setFormOpen(true);
@@ -350,6 +459,7 @@ export default function ResourcesAdmin() {
                         background: "#111e2d",
                         color: "#7a94aa",
                         border: "1px solid #1e3347",
+                        cursor: "pointer"
                       }}
                     >
                       Redigera
@@ -361,6 +471,7 @@ export default function ResourcesAdmin() {
                         background: "rgba(244,63,94,0.1)",
                         color: "#f43f5e",
                         border: "1px solid rgba(244,63,94,0.25)",
+                        cursor: "pointer"
                       }}
                     >
                       Ta bort
@@ -383,6 +494,10 @@ export default function ResourcesAdmin() {
           types={types}
           editing={Boolean(editing)}
           alert={alert}
+          newTypeName={newTypeName}
+          creatingType={creatingType}
+          onNewTypeNameChange={setNewTypeName}
+          onAddResourceType={addResourceType}
           onChange={setForm}
           onSubmit={submit}
           onClose={closeForm}

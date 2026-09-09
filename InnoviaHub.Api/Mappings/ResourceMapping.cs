@@ -12,6 +12,7 @@ public static class ResourceMapping
             Id = model.Id,
             Name = model.Name,
             ResourceType = model.ResourceType.ToDto(),
+            Zone = model.Zone,
             Capacity = model.Capacity,
             IsActive = model.IsActive,
             CreatedAt = model.CreatedAt,

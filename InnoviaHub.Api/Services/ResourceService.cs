@@ -41,6 +41,7 @@ public class ResourceService(IResourceRepository resourceRepository,
             Id = Guid.NewGuid(),
             Name = dto.Name,
             ResourceTypeId = resourceType.Id,
+            Zone =  dto.Zone,
             IsActive = true,
             Capacity = dto.Capacity,
             CreatedAt = DateTime.UtcNow
@@ -65,6 +66,7 @@ public class ResourceService(IResourceRepository resourceRepository,
         
         resource.Name = dto.Name;
         resource.ResourceTypeId = resourceType.Id;
+        resource.Zone = dto.Zone;
         resource.IsActive = dto.IsActive;
         resource.Capacity = dto.Capacity;
         await resourceRepository.UpdateAsync(resource);

@@ -21,11 +21,13 @@ const recentBookings = [
     resource: "Mötesrum A",
     user: "Fredrik Fritzon",
     time: "09:00–11:00",
+    date: "2026-09-29",
     status: "active",
   },
   {
     resource: "AI-server",
     user: "Fredrik Fritzon",
+    date: "2026-10-10",
     time: "08:00–16:00",
     status: "active",
   },
@@ -322,7 +324,7 @@ function DashboardView({ alerts }: { alerts: number }) {
         style={{ background: "#0d1824", border: "1px solid #1e3347" }}
       >
         <h3 className="font-bold mb-4" style={{ color: "#e2eaf2" }}>
-          Senaste bokningar
+          Aktiva bokningar
         </h3>
         {recentBookings.map((booking) => (
           <div
@@ -346,9 +348,18 @@ function DashboardView({ alerts }: { alerts: number }) {
             </div>
             <div className="flex items-center gap-3">
               <span className="mono text-xs" style={{ color: "#7a94aa" }}>
-                {booking.time}
+                Tid: {booking.time}
               </span>
-              <AdminStatusBadge status={booking.status} />
+              <span className="mono text-xs" style={{ color: "#7a94aa" }}>
+                Datum: {booking.date}
+              </span>
+              <button className="text-xs px-3 py-2 rounded-lg"
+                      style={{
+                        background: "rgba(244,63,94,0.1)",
+                        color: "#f43f5e",
+                        border: "1px solid rgba(244,63,94,0.25)",
+                        cursor: "pointer"
+                      }}>Ta bort</button>
             </div>
           </div>
         ))}

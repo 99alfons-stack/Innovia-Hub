@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { LoginResponse } from "../../services/authService";
-import { createBooking } from "../../services/bookingApiService";
+import {
+  createBooking,
+  getAllBookings,
+  type Booking,
+} from "../../services/bookingApiService";
 import { getAllResources, type Resource as ApiResource } from "../../services/resourceService";
 import UserAvatar from "../components/UserAvatar";
 import {
@@ -69,9 +73,27 @@ function mapApiResource(resource: ApiResource): Resource {
   };
 }
 
+function bookingOverlapsSelection(
+  booking: Booking,
+  resourceId: string,
+  date: string,
+  timeSlot: string,
+  duration: string,
+) {
+  if (booking.resource.id !== resourceId || booking.isCancelled) return false;
+
+  const startTime = new Date(`${date}T${timeSlot}:00`);
+  const durationHours = duration === "Heldag" ? 8 : Number.parseInt(duration, 10);
+  const endTime = new Date(startTime);
+  endTime.setHours(endTime.getHours() + durationHours);
+
+  return new Date(booking.startTime) < endTime && new Date(booking.endTime) > startTime;
+}
+
 export default function BookingPage({ user }: { user: LoginResponse | null }) {
   const [filter, setFilter] = useState("all");
   const [resources, setResources] = useState<Resource[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [selected, setSelected] = useState<Resource | null>(null);
   const [step, setStep] = useState<Step>("select");
   const [timeSlot, setTimeSlot] = useState("10:00");
@@ -85,8 +107,20 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
     async function loadResources() {
       try {
         // Resource IDs from the API are GUIDs, which the booking endpoint requires.
-        const apiResources = await getAllResources();
-        setResources(apiResources.filter((resource) => resource.isActive).map(mapApiResource));
+        const [apiResources, bookings] = await Promise.all([
+          getAllResources(),
+          getAllBookings(),
+        ]);
+        setBookings(bookings);
+
+        setResources(
+          apiResources
+            .filter((resource) => resource.isActive)
+            .map((resource) => ({
+              ...mapApiResource(resource),
+              status: "available",
+            })),
+        );
       } catch (error) {
         setBookingError(error instanceof Error ? error.message : "Kunde inte hämta resurser");
       }
@@ -96,28 +130,39 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
   }, []);
 
   useEffect(() => {
+    setResources((currentResources) =>
+      currentResources.map((resource) => ({
+        ...resource,
+        status: bookings.some((booking) =>
+          bookingOverlapsSelection(booking, resource.id, date, timeSlot, duration),
+        )
+          ? "booked"
+          : "available",
+      })),
+    );
+  }, [bookings, date, timeSlot, duration]);
+
+  useEffect(() => {
     let isMounted = true;
 
     async function connectToNotifications() {
       try {
-        await startNotificationConnection();
-
-        if (!isMounted) return;
-
         connection.on("BookingCreated", (booking) => {
           // SignalR-eventet innehåller den bokade resursens databasID.
           const resourceId = booking.resource?.id;
 
           if (!resourceId) return;
 
-          setResources((currentResources) =>
-            currentResources.map((resource) =>
-              resource.id === resourceId
-                ? { ...resource, status: "booked" }
-                : resource,
-            ),
+          setBookings((currentBookings) =>
+            currentBookings.some((currentBooking) => currentBooking.id === booking.id)
+              ? currentBookings
+              : [...currentBookings, booking],
           );
         });
+
+        await startNotificationConnection();
+
+        if (!isMounted) return;
       } catch (error) {
         console.error("Kunde inte ansluta till SignalR:", error);
       }
@@ -160,11 +205,13 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
     setBookingError(null);
 
     try {
-      await createBooking({
+      const booking = await createBooking({
         resourceId: selected.id,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
       });
+
+      setBookings((currentBookings) => [...currentBookings, booking]);
       setStep("done");
     } catch (error) {
       setBookingError(error instanceof Error ? error.message : "Bokningen kunde inte skapas");

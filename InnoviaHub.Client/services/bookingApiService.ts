@@ -36,3 +36,15 @@ export async function createBooking(
 
     return response.json() as Promise<Booking>;
 }
+
+export async function getAllBookings(): Promise<Booking[]> {
+    const response = await fetch(API_URL, {
+        credentials: "include",
+    });
+
+    if (!response.ok) {
+        throw new Error("Kunde inte hämta bokningar");
+    }
+
+    return response.json() as Promise<Booking[]>;
+}

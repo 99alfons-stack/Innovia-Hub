@@ -88,4 +88,18 @@ public class BookingsController(
         
         return Ok(cancelled);
     }
+
+    [Authorize(Roles = nameof(UserRoles.Admin))]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var userId = GetCurrentUserId();
+        var isAdmin = User.IsInRole(nameof(UserRoles.Admin));
+        var deleted = await bookingService.DeleteAsync(id, userId, isAdmin);
+
+        if (!deleted)
+            return NotFound();
+        
+        return NoContent();
+    }
 }

@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { LoginResponse } from "../../services/authService";
 import AdminStatusBadge from "../components/AdminStatusBadge";
+import Alert from "../components/Alert";
 import MembersAdmin from "../components/MembersAdmin";
 import ResourcesAdmin from "../components/ResourcesAdmin";
+import { deleteBooking, getAllBookings, type Booking } from "../../services/bookingApiService";
+import { getAllResources, type Resource } from "../../services/resourceService";
 
 type AdminTab = "dashboard" | "sensors" | "resources" | "members";
 
@@ -16,23 +19,7 @@ type Sensor = {
   trend: string;
 };
 
-const recentBookings = [
-  {
-    resource: "Mötesrum A",
-    user: "Fredrik Fritzon",
-    time: "09:00–11:00",
-    date: "2026-09-29",
-    status: "active",
-  },
-  {
-    resource: "AI-server",
-    user: "Fredrik Fritzon",
-    date: "2026-10-10",
-    time: "08:00–16:00",
-    status: "active",
-  },
-];
-
+//Hårdkodad data för sensorer
 const sensors: Sensor[] = [
   {
     id: "s1",
@@ -82,12 +69,105 @@ const tabs: { id: AdminTab; label: string; icon: string }[] = [
 export default function AdminPage({ onBack, user }: { onBack: () => void; user: LoginResponse }) {
   const [tab, setTab] = useState<AdminTab>("dashboard");
   const alertCount = sensors.filter((sensor) => sensor.status !== "ok").length;
+  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
+
+  useEffect(() => {
+    async function loadBookings() {
+      try {
+        const [bookings, apiResources] = await Promise.all([
+          getAllBookings(),
+          getAllResources()
+        ]);
+
+        setResources(apiResources.filter((resource) => resource.isActive));
+
+        setRecentBookings(
+          bookings
+            .filter((booking) => !booking.isCancelled)
+            .sort(
+              (a, b) =>
+                new Date(a.startTime).getTime() -
+                new Date(b.startTime).getTime(),
+            ),
+        );
+      } catch (error) {
+        setBookingError(
+          error instanceof Error ? error.message : "Kunde inte hämta bokningar",
+        );
+      }
+    }
+
+    loadBookings();
+  }, []);
+
+  async function handleDeleteBooking(id: string) {
+    setBookingToDelete(id);
+  }
+
+  async function confirmDeleteBooking() {
+    if (!bookingToDelete) return;
+
+    try {
+      await deleteBooking(bookingToDelete);
+      setRecentBookings((currentBookings) =>
+        currentBookings.filter((booking) => booking.id !== bookingToDelete),
+      );
+      setBookingError(null);
+      setBookingToDelete(null);
+    } catch (error) {
+      setBookingError(
+        error instanceof Error ? error.message : "Kunde inte ta bort bokningen",
+      );
+      setBookingToDelete(null);
+    }
+  }
+
+  //Räknar ut belänning för bokningar
+  const now = new Date();
+
+  const activeBookingCount = recentBookings.filter((booking) => {
+    const start = new Date(booking.startTime);
+    const end = new Date(booking.endTime);
+
+    return start <= now && end > now;
+  }).length
+
+  const today = now.toLocaleDateString("sv-SE");
+  const newBookingCount = recentBookings.filter((booking) =>
+  new Date(booking.createdAt).toLocaleDateString("sv-SE") === today,).length
+
+
+// Räknar resurser som har minst en aktiv bokning.
+const activeResources = resources.filter((resource) => resource.isActive);
+
+const occupiedResourceIds = new Set(
+  recentBookings.map((booking) => booking.resource.id),
+);
+
+const occupancyPercentage =
+  activeResources.length === 0
+    ? 0
+    : Math.min(
+        100,
+        Math.round((occupiedResourceIds.size / activeResources.length) * 100),
+      );
 
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ background: "#080e14" }}
     >
+      {bookingToDelete && (
+        <Alert
+          message="Vill du ta bort bokningen?"
+          type="confirm"
+          onClose={() => setBookingToDelete(null)}
+          onConfirm={confirmDeleteBooking}
+        />
+      )}
       <header
         className="sticky top-0 z-40 flex items-center justify-between px-6 py-4"
         style={{
@@ -203,7 +283,18 @@ export default function AdminPage({ onBack, user }: { onBack: () => void; user: 
               mobile
             />
           </div>
-          {tab === "dashboard" && <DashboardView alerts={alertCount} />}
+          {tab === "dashboard" && (
+            <DashboardView
+              alerts={alertCount}
+              recentBookings={recentBookings}
+              bookingError={bookingError}
+              onDeleteBooking={handleDeleteBooking}
+              onClearBookingError={() => setBookingError(null)}
+              activeBookingCount={activeBookingCount}
+              newBookingCount={newBookingCount}
+              occupancyPercentage={occupancyPercentage}
+            />
+          )}
           {tab === "sensors" && <SensorsView />}
           {tab === "resources" && <ResourcesAdmin />}
           {tab === "members" && <MembersAdmin />}
@@ -266,7 +357,25 @@ function AdminNavigation({
   );
 }
 
-function DashboardView({ alerts }: { alerts: number }) {
+function DashboardView({
+  alerts,
+  recentBookings,
+  bookingError,
+  onDeleteBooking,
+  onClearBookingError,
+  activeBookingCount,
+  newBookingCount,
+  occupancyPercentage,
+}: {
+  alerts: number;
+  recentBookings: Booking[];
+  bookingError: string | null;
+  onDeleteBooking: (id: string) => void;
+  onClearBookingError: () => void;
+  activeBookingCount: number;
+  newBookingCount: number;
+  occupancyPercentage: number;
+}) {
   return (
     <div className="space-y-6">
       <h1
@@ -279,13 +388,13 @@ function DashboardView({ alerts }: { alerts: number }) {
         {[
           {
             label: "Beläggning",
-            value: "94%",
+            value: `${occupancyPercentage}%`,
             sub: "av total kapacitet",
             color: "#00d4aa",
           },
           {
             label: "Aktiva bokningar",
-            value: "23",
+            value: String(activeBookingCount),
             sub: "just nu",
             color: "#3b82f6",
           },
@@ -297,7 +406,7 @@ function DashboardView({ alerts }: { alerts: number }) {
           },
           {
             label: "Nya idag",
-            value: "8",
+            value: String(newBookingCount),
             sub: "bokningar skapade",
             color: "#a855f7",
           },
@@ -326,40 +435,59 @@ function DashboardView({ alerts }: { alerts: number }) {
         <h3 className="font-bold mb-4" style={{ color: "#e2eaf2" }}>
           Aktiva bokningar
         </h3>
+        {bookingError && (
+          <Alert
+            message={bookingError}
+            type="error"
+            onClose={onClearBookingError}
+          />
+        )}
         {recentBookings.map((booking) => (
           <div
-            key={`${booking.resource}-${booking.time}`}
-            className="flex items-center justify-between py-3"
+            key={booking.id}
+            className="flex items-center justify-between gap-4 py-3"
             style={{ borderBottom: "1px solid #1e3347" }}
           >
             <div>
-              <span
-                className="text-sm font-medium"
-                style={{ color: "#e2eaf2" }}
-              >
-                {booking.resource}
+              <span className="text-sm font-medium" style={{ color: "#e2eaf2" }}>
+                {booking.resource.name}
               </span>
               <span className="text-sm mx-2" style={{ color: "#1e3347" }}>
                 ·
               </span>
               <span className="text-sm" style={{ color: "#7a94aa" }}>
-                {booking.user}
+                {booking.user.firstName} {booking.user.lastName}
               </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="mono text-xs" style={{ color: "#7a94aa" }}>
-                Tid: {booking.time}
+                Tid: {""}
+                {new Date(booking.startTime).toLocaleTimeString("sv-SE", {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })}
+                –
+                {new Date(booking.endTime).toLocaleTimeString("sv-SE", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
               <span className="mono text-xs" style={{ color: "#7a94aa" }}>
-                Datum: {booking.date}
+                Datum: {""}
+                {new Date(booking.startTime).toLocaleDateString("sv-SE")}
               </span>
-              <button className="text-xs px-3 py-2 rounded-lg"
-                      style={{
-                        background: "rgba(244,63,94,0.1)",
-                        color: "#f43f5e",
-                        border: "1px solid rgba(244,63,94,0.25)",
-                        cursor: "pointer"
-                      }}>Ta bort</button>
+              <button
+                onClick={() => onDeleteBooking(booking.id)}
+                className="text-xs px-3 py-2 rounded-lg"
+                style={{
+                  background: "rgba(244,63,94,0.1)",
+                  color: "#f43f5e",
+                  border: "1px solid rgba(244,63,94,0.25)",
+                  cursor: "pointer",
+                }}
+              >
+                Ta bort
+              </button>
             </div>
           </div>
         ))}

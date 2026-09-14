@@ -100,14 +100,14 @@ public class BookingService(IBookingRepository bookingRepository) : IBookingServ
         return updatedBooking.ToDto();
     }
 
-    public async Task<bool> DeleteAsync(Guid id, Guid userId)
+    public async Task<bool> DeleteAsync(Guid id, Guid userId, bool isAdmin)
     {
         var booking = await bookingRepository.GetByIdAsync(id);
 
         if (booking is null)
             return false;
 
-        if (booking.UserId != userId)
+        if (booking.UserId != userId && !isAdmin)
             throw new UnauthorizedAccessException();
         
         await bookingRepository.DeleteAsync(booking);

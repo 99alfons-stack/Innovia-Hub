@@ -7,6 +7,7 @@ import {
 } from "../../services/bookingApiService";
 import { getAllResources, type Resource as ApiResource } from "../../services/resourceService";
 import UserAvatar from "../components/UserAvatar";
+import BookingNotification from "../components/BookingNotification";
 import {
   connection,
   startNotificationConnection,
@@ -102,6 +103,7 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
   const [date, setDate] = useState("2025-11-18");
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     async function loadResources() {
@@ -153,6 +155,8 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
 
           if (!resourceId) return;
 
+          setLatestBooking(booking);
+
           setBookings((currentBookings) =>
             currentBookings.some((currentBooking) => currentBooking.id === booking.id)
               ? currentBookings
@@ -175,6 +179,14 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
       connection.off("BookingCreated");
     };
   }, []);
+
+  useEffect(() => {
+    if (!latestBooking) return;
+
+    const timeoutId = window.setTimeout(() => setLatestBooking(null), 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [latestBooking]);
 
   const filtered = resources.filter(
     (r) => filter === "all" || r.type === filter
@@ -222,6 +234,12 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
 
   return (
     <div className="min-h-screen" style={{ background: "#080e14" }}>
+      {latestBooking && (
+        <BookingNotification
+          booking={latestBooking}
+          onClose={() => setLatestBooking(null)}
+        />
+      )}
       {/* Header */}
       <header
         className="sticky top-0 z-40 flex items-center justify-between px-6 py-4"

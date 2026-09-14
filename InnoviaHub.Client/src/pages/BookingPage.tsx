@@ -1,14 +1,23 @@
 import { useEffect, useState } from "react";
 import type { LoginResponse } from "../../services/authService";
-import { createBooking } from "../../services/bookingApiService";
-import { getAllResources, type Resource as ApiResource } from "../../services/resourceService";
+import {
+  createBooking,
+  getAllBookings,
+  type Booking,
+} from "../../services/bookingApiService";
+import {
+  getAllResources,
+  getAllResourceTypes,
+  type Resource as ApiResource,
+  type ResourceType,
+} from "../../services/resourceService";
 import UserAvatar from "../components/UserAvatar";
 import {
   connection,
   startNotificationConnection,
 } from "../../services/notificationService";
+import BookingCalendar from "../components/BookingCalendar.tsx";
 
-type ResourceType = "desk" | "room" | "vr" | "ai";
 type Step = "select" | "configure" | "confirm" | "done";
 
 interface Resource {
@@ -22,62 +31,50 @@ interface Resource {
   icon: string;
 }
 
-const typeFilters = [
-  { id: "all", label: "Alla" },
-  { id: "desk", label: "Skrivbord" },
-  { id: "room", label: "Mötesrum" },
-  { id: "vr", label: "VR-headset" },
-  { id: "ai", label: "AI-server" },
-];
-
 const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
 const durations = ["1 timme", "2 timmar", "3 timmar", "Heldag"];
 
-function toResourceType(name: string): ResourceType {
-  const normalizedName = name.toLowerCase();
-
-  if (normalizedName.includes("rum") || normalizedName.includes("room")) return "room";
-  if (normalizedName.includes("vr")) return "vr";
-  if (normalizedName.includes("ai") || normalizedName.includes("server")) return "ai";
-  return "desk";
-}
-
 function mapApiResource(resource: ApiResource): Resource {
-  const type = toResourceType(resource.resourceType.name);
-  const colors: Record<ResourceType, string> = {
-    desk: "#3b82f6",
-    room: "#00d4aa",
-    vr: "#a855f7",
-    ai: "#f59e0b",
-  };
-  const icons: Record<ResourceType, string> = {
-    desk: "⬜",
-    room: "▪",
-    vr: "◈",
-    ai: "◆",
-  };
-
   return {
     id: resource.id,
-    type,
+    type: resource.resourceType,
     label: resource.name,
     sub: `${resource.capacity} ${resource.capacity === 1 ? "plats" : "platser"}`,
     status: "available",
     features: [],
-    color: colors[type],
-    icon: icons[type],
+    color: "#3b82f6",
+    icon: "⬜",
   };
 }
 
+function bookingOverlapsSelection(
+  booking: Booking,
+  resourceId: string,
+  date: string,
+  timeSlot: string,
+  duration: string,
+) {
+  if (booking.resource.id !== resourceId || booking.isCancelled) return false;
+
+  const startTime = new Date(`${date}T${timeSlot}:00`);
+  const durationHours = duration === "Heldag" ? 8 : Number.parseInt(duration, 10);
+  const endTime = new Date(startTime);
+  endTime.setHours(endTime.getHours() + durationHours);
+
+  return new Date(booking.startTime) < endTime && new Date(booking.endTime) > startTime;
+}
+
 export default function BookingPage({ user }: { user: LoginResponse | null }) {
-  const [filter, setFilter] = useState("all");
   const [resources, setResources] = useState<Resource[]>([]);
+  const [resourceTypes, setResourceTypes] = useState<ResourceType[] | null>(null);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [selected, setSelected] = useState<Resource | null>(null);
   const [step, setStep] = useState<Step>("select");
   const [timeSlot, setTimeSlot] = useState("10:00");
   const [duration, setDuration] = useState("2 timmar");
   const [purpose, setPurpose] = useState("");
-  const [date, setDate] = useState("2025-11-18");
+  const [date, setDate] = useState(new Date().toLocaleDateString("se-SE"));
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
@@ -85,8 +82,22 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
     async function loadResources() {
       try {
         // Resource IDs from the API are GUIDs, which the booking endpoint requires.
-        const apiResources = await getAllResources();
-        setResources(apiResources.filter((resource) => resource.isActive).map(mapApiResource));
+        const [apiResources, bookings, resourceTypes] = await Promise.all([
+          getAllResources(),
+          getAllBookings(),
+          getAllResourceTypes(),
+        ]);
+        setBookings(bookings);
+        setResourceTypes(resourceTypes);
+
+        setResources(
+          apiResources
+            .filter((resource) => resource.isActive)
+            .map((resource) => ({
+              ...mapApiResource(resource),
+              status: "available",
+            })),
+        );
       } catch (error) {
         setBookingError(error instanceof Error ? error.message : "Kunde inte hämta resurser");
       }
@@ -96,28 +107,39 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
   }, []);
 
   useEffect(() => {
+    setResources((currentResources) =>
+      currentResources.map((resource) => ({
+        ...resource,
+        status: bookings.some((booking) =>
+          bookingOverlapsSelection(booking, resource.id, date, timeSlot, duration),
+        )
+          ? "booked"
+          : "available",
+      })),
+    );
+  }, [bookings, date, timeSlot, duration]);
+
+  useEffect(() => {
     let isMounted = true;
 
     async function connectToNotifications() {
       try {
-        await startNotificationConnection();
-
-        if (!isMounted) return;
-
         connection.on("BookingCreated", (booking) => {
           // SignalR-eventet innehåller den bokade resursens databasID.
           const resourceId = booking.resource?.id;
 
           if (!resourceId) return;
 
-          setResources((currentResources) =>
-            currentResources.map((resource) =>
-              resource.id === resourceId
-                ? { ...resource, status: "booked" }
-                : resource,
-            ),
+          setBookings((currentBookings) =>
+            currentBookings.some((currentBooking) => currentBooking.id === booking.id)
+              ? currentBookings
+              : [...currentBookings, booking],
           );
         });
+
+        await startNotificationConnection();
+
+        if (!isMounted) return;
       } catch (error) {
         console.error("Kunde inte ansluta till SignalR:", error);
       }
@@ -132,14 +154,8 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
   }, []);
 
   const filtered = resources.filter(
-    (r) => filter === "all" || r.type === filter
+    (r) => r.type.id === selectedTypeId
   );
-
-  function selectResource(r: Resource) {
-    if (r.status !== "available") return;
-    setSelected(r);
-    setStep("configure");
-  }
 
   function reset() {
     setSelected(null);
@@ -160,11 +176,13 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
     setBookingError(null);
 
     try {
-      await createBooking({
+      const booking = await createBooking({
         resourceId: selected.id,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
       });
+
+      setBookings((currentBookings) => [...currentBookings, booking]);
       setStep("done");
     } catch (error) {
       setBookingError(error instanceof Error ? error.message : "Bokningen kunde inte skapas");
@@ -241,226 +259,391 @@ export default function BookingPage({ user }: { user: LoginResponse | null }) {
 
         {/* Step: Select */}
         {step === "select" && (
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h1 className="text-2xl font-bold" style={{ fontFamily: "Outfit, sans-serif", color: "#e2eaf2" }}>
-                Välj en resurs att boka
-              </h1>
-              <div className="flex gap-2 flex-wrap">
-                {typeFilters.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setFilter(f.id)}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150"
+            <div className="max-w-5xl mx-auto">
+
+              <div className="mb-8">
+                <h1
+                    className="text-3xl font-bold mb-2"
                     style={{
-                      background: filter === f.id ? "#00d4aa" : "#111e2d",
-                      color: filter === f.id ? "#080e14" : "#7a94aa",
-                      border: `1px solid ${filter === f.id ? "#00d4aa" : "#1e3347"}`,
+                      color: "#e2eaf2",
                       fontFamily: "Outfit, sans-serif",
                     }}
-                  >
-                    {f.label}
-                  </button>
+                >
+                  Vad vill du boka?
+                </h1>
+
+                <p
+                    className="text-sm"
+                    style={{ color: "#7a94aa" }}
+                >
+                  Välj en resurstyp för att se tillgängliga tider och resurser.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {resourceTypes?.map((type) => (
+                    <button
+                        key={type.id}
+                        onClick={() => {
+                          setSelectedTypeId(type.id);
+                          setSelected(null);
+                          setStep("configure");
+                        }}
+                        className="rounded-2xl p-7 text-left transition-all duration-200 min-h-45 flex flex-col justify-between"
+                        style={{
+                          background: "#0d1824",
+                          border: "1px solid #1e3347",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#00d4aa";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#1e3347";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                    >
+                      <div>
+                        <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                            style={{
+                              background: "rgba(0,212,170,0.10)",
+                              color: "#00d4aa",
+                              fontSize: "20px",
+                            }}
+                        >
+                          ◈
+                        </div>
+
+                        <h3
+                            className="text-xl font-semibold mb-2"
+                            style={{
+                              color: "#e2eaf2",
+                              fontFamily: "Outfit, sans-serif",
+                            }}
+                        >
+                          {type.name}
+                        </h3>
+
+                        <p
+                            className="text-sm leading-6"
+                            style={{ color: "#7a94aa" }}
+                        >
+                          {type.description || "Visa tillgängliga resurser"}
+                        </p>
+                      </div>
+
+                      <div
+                          className="mt-6 text-sm font-medium"
+                          style={{ color: "#00d4aa" }}
+                      >
+                        Välj →
+                      </div>
+                    </button>
                 ))}
               </div>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {filtered.map((r) => {
-                const avail = r.status === "available";
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => selectResource(r)}
-                    disabled={!avail}
-                    className="rounded-xl p-4 text-left transition-all duration-150"
-                    style={{
-                      background: "#0d1824",
-                      border: `1px solid ${avail ? "#1e3347" : "#1e3347"}`,
-                      opacity: avail ? 1 : 0.5,
-                      cursor: avail ? "pointer" : "not-allowed",
-                    }}
-                    onMouseEnter={(e) => avail && (e.currentTarget.style.borderColor = r.color + "66")}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e3347")}
-                  >
-                    <div
-                      className="rounded-lg flex items-center justify-center text-base mb-3"
-                      style={{ width: 36, height: 36, background: r.color + "18", color: r.color }}
-                    >
-                      {r.icon}
-                    </div>
-                    <div className="text-sm font-semibold mb-1" style={{ fontFamily: "Outfit, sans-serif", color: "#e2eaf2" }}>
-                      {r.label}
-                    </div>
-                    <div className="text-xs mb-2" style={{ color: "#7a94aa" }}>{r.sub}</div>
-                    <span
-                      className="inline-block px-2 py-0.5 rounded-full text-xs mono"
-                      style={{
-                        background: avail ? "rgba(0,212,170,0.1)" : "rgba(244,63,94,0.1)",
-                        color: avail ? "#00d4aa" : r.status === "reserved" ? "#f59e0b" : "#f43f5e",
-                        border: `1px solid ${avail ? "rgba(0,212,170,0.2)" : "rgba(244,63,94,0.2)"}`,
-                      }}
-                    >
-                      {avail ? "Ledig" : r.status === "reserved" ? "Reserverad" : "Bokad"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 flex items-center gap-4">
-              {[
-                { color: "#00d4aa", label: "Ledig" },
-                { color: "#f43f5e", label: "Bokad" },
-                { color: "#f59e0b", label: "Reserverad" },
-              ].map((l) => (
-                <div key={l.label} className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: l.color }} />
-                  <span className="text-xs" style={{ color: "#7a94aa" }}>{l.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         )}
 
         {/* Step: Configure */}
-        {step === "configure" && selected && (
-          <div className="max-w-2xl">
-            <button onClick={reset} className="flex items-center gap-2 mb-6 text-sm" style={{ color: "#7a94aa" }}>
-              ← Tillbaka
-            </button>
-            <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: "Outfit, sans-serif", color: "#e2eaf2" }}>
-              Konfigurera bokning
-            </h1>
-            <p className="text-sm mb-8" style={{ color: "#7a94aa" }}>
-              Du bokar: <span style={{ color: selected.color }}>{selected.label}</span>
-            </p>
+        {step === "configure" && selectedTypeId && (
+            <div>
+              <button
+                  onClick={reset}
+                  className="flex items-center gap-2 mb-6 text-sm"
+                  style={{ color: "#7a94aa" }}
+              >
+                ← Tillbaka
+              </button>
 
-            <div className="space-y-6">
-              {/* Date */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "#e2eaf2", fontFamily: "Outfit, sans-serif" }}>
-                  Datum
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm mono outline-none"
+              <h1
+                  className="text-2xl font-bold mb-2"
                   style={{
-                    background: "#0d1824",
-                    border: "1px solid #1e3347",
+                    fontFamily: "Outfit, sans-serif",
                     color: "#e2eaf2",
                   }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "#00d4aa")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "#1e3347")}
-                />
-              </div>
+              >
+                Konfigurera bokning
+              </h1>
 
-              {/* Time slot */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "#e2eaf2", fontFamily: "Outfit, sans-serif" }}>
-                  Starttid
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {timeSlots.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTimeSlot(t)}
-                      className="px-3 py-2 rounded-lg text-sm mono transition-all duration-150"
-                      style={{
-                        background: timeSlot === t ? "rgba(0,212,170,0.15)" : "#0d1824",
-                        border: `1px solid ${timeSlot === t ? "#00d4aa" : "#1e3347"}`,
-                        color: timeSlot === t ? "#00d4aa" : "#7a94aa",
-                      }}
+              <p
+                  className="text-sm mb-8"
+                  style={{ color: "#7a94aa" }}
+              >
+                Välj datum, starttid och längd. Välj sedan en ledig resurs.
+              </p>
+
+              <div className="grid lg:grid-cols-[360px_1fr] gap-8">
+
+                {/* Vänster sida - datum och tid */}
+                <div
+                    className="space-y-6 rounded-xl p-5"
+                    style={{
+                      background: "#0d1824",
+                      border: "1px solid #1e3347",
+                    }}
+                >
+
+                  {/* Date */}
+                  <div>
+                    <label
+                        className="block text-sm font-medium mb-2"
+                        style={{
+                          color: "#e2eaf2",
+                          fontFamily: "Outfit, sans-serif",
+                        }}
                     >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      Datum
+                    </label>
 
-              {/* Duration */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "#e2eaf2", fontFamily: "Outfit, sans-serif" }}>
-                  Längd
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {durations.map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setDuration(d)}
-                      className="px-4 py-2 rounded-lg text-sm transition-all duration-150"
+                    <BookingCalendar
+                        selectedDate={date}
+                        onSelectDate={(newDate) => {
+                          setDate(newDate);
+                          setSelected(null);
+                        }}
+                    />
+                  </div>
+
+                  {/* Time slot */}
+                  <div>
+                    <label
+                        className="block text-sm font-medium mb-2"
+                        style={{
+                          color: "#e2eaf2",
+                          fontFamily: "Outfit, sans-serif",
+                        }}
+                    >
+                      Starttid
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                      {timeSlots.map((t) => (
+                          <button
+                              key={t}
+                              onClick={() => {
+                                setTimeSlot(t);
+                                setSelected(null);
+                              }}
+                              className="px-3 py-2 rounded-lg text-sm mono transition-all duration-150"
+                              style={{
+                                background:
+                                    timeSlot === t
+                                        ? "rgba(0,212,170,0.15)"
+                                        : "#0d1824",
+                                border: `1px solid ${
+                                    timeSlot === t ? "#00d4aa" : "#1e3347"
+                                }`,
+                                color:
+                                    timeSlot === t ? "#00d4aa" : "#7a94aa",
+                              }}
+                          >
+                            {t}
+                          </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Duration */}
+                  <div>
+                    <label
+                        className="block text-sm font-medium mb-2"
+                        style={{
+                          color: "#e2eaf2",
+                          fontFamily: "Outfit, sans-serif",
+                        }}
+                    >
+                      Längd
+                    </label>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {durations.map((d) => (
+                          <button
+                              key={d}
+                              onClick={() => {
+                                setDuration(d);
+                                setSelected(null);
+                              }}
+                              className="px-4 py-2 rounded-lg text-sm transition-all duration-150"
+                              style={{
+                                background:
+                                    duration === d
+                                        ? "rgba(0,212,170,0.15)"
+                                        : "#0d1824",
+                                border: `1px solid ${
+                                    duration === d ? "#00d4aa" : "#1e3347"
+                                }`,
+                                color:
+                                    duration === d ? "#00d4aa" : "#7a94aa",
+                                fontFamily: "Outfit, sans-serif",
+                              }}
+                          >
+                            {d}
+                          </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center gap-4">
+                    {[
+                      { color: "#00d4aa", label: "Ledig" },
+                      { color: "#f43f5e", label: "Bokad" },
+                      { color: "#f59e0b", label: "Reserverad" },
+                    ].map((l) => (
+                        <div
+                            key={l.label}
+                            className="flex items-center gap-1.5"
+                        >
+                          <div
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ background: l.color }}
+                          />
+                          <span
+                              className="text-xs"
+                              style={{ color: "#7a94aa" }}
+                          >
+                {l.label}
+              </span>
+                        </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Höger sida - resurser */}
+                <div
+                    className="rounded-xl p-5 self-start"
+                    style={{
+                      background: "#0d1824",
+                      border: "1px solid #1e3347",
+                    }}
+                >
+                  <h2
+                      className="text-lg font-semibold mb-4"
                       style={{
-                        background: duration === d ? "rgba(0,212,170,0.15)" : "#0d1824",
-                        border: `1px solid ${duration === d ? "#00d4aa" : "#1e3347"}`,
-                        color: duration === d ? "#00d4aa" : "#7a94aa",
+                        color: "#e2eaf2",
                         fontFamily: "Outfit, sans-serif",
                       }}
-                    >
-                      {d}
-                    </button>
-                  ))}
+                  >
+                    Resurser
+                  </h2>
+
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filtered.map((r) => {
+                      const avail = r.status === "available";
+                      const isSelected = selected?.id === r.id;
+
+                      return (
+                          <button
+                              key={r.id}
+                              onClick={() => avail && setSelected(r)}
+                              disabled={!avail}
+                              className="rounded-xl p-5 text-left transition-all duration-150"
+                              style={{
+                                background: "#111e2d",
+                                border: `1px solid ${
+                                    isSelected ? "#00d4aa" : "#1e3347"
+                                }`,
+                                opacity: avail ? 1 : 0.5,
+                                cursor: avail ? "pointer" : "not-allowed",
+                                boxShadow: isSelected
+                                    ? "0 0 0 1px rgba(0,212,170,0.15)"
+                                    : "none",
+                              }}
+                          >
+                            <div
+                                className="text-sm font-semibold mb-1"
+                                style={{ color: "#e2eaf2" }}
+                            >
+                              {r.label}
+                            </div>
+
+                            <div
+                                className="text-xs mb-3"
+                                style={{ color: "#7a94aa" }}
+                            >
+                              {r.sub}
+                            </div>
+
+                            <span
+                                className="inline-block px-2 py-0.5 rounded-full text-xs"
+                                style={{
+                                  background: avail
+                                      ? "rgba(0,212,170,0.1)"
+                                      : "rgba(244,63,94,0.1)",
+                                  color: avail ? "#00d4aa" : "#f43f5e",
+                                }}
+                            >
+                              {avail ? "Ledig" : "Bokad"}
+                            </span>
+                          </button>
+                      );
+                    })}
+                  </div>
+
+                  {filtered.length === 0 && (
+                      <div
+                          className="rounded-xl p-6 text-sm mt-3"
+                          style={{
+                            background: "#0d1824",
+                            border: "1px solid #1e3347",
+                            color: "#7a94aa",
+                          }}
+                      >
+                        Det finns inga resurser för den valda typen.
+                      </div>
+                  )}
                 </div>
               </div>
 
               {/* Purpose */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "#e2eaf2", fontFamily: "Outfit, sans-serif" }}>
-                  Syfte (valfritt)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Ex: Kundmöte med Acme AB, designworkshop..."
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
-                  style={{
-                    background: "#0d1824",
-                    border: "1px solid #1e3347",
-                    color: "#e2eaf2",
-                  }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "#00d4aa")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "#1e3347")}
-                />
-              </div>
-
-              {/* Features */}
-              <div
-                className="rounded-xl p-4"
-                style={{ background: "#111e2d", border: "1px solid #1e3347" }}
-              >
-                <div className="text-xs font-medium mb-3" style={{ color: "#7a94aa", fontFamily: "Outfit, sans-serif" }}>
-                  Ingår i bokningen
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selected.features.map((f) => (
-                    <span
-                      key={f}
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{
-                        background: selected.color + "15",
-                        color: selected.color,
-                        border: `1px solid ${selected.color}33`,
-                      }}
+              {selected && (
+                  <div className="max-w-2xl mt-8 mx-auto">
+                    <label
+                        className="block text-sm font-medium mb-2"
+                        style={{
+                          color: "#e2eaf2",
+                          fontFamily: "Outfit, sans-serif",
+                        }}
                     >
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
+                      Syfte (valfritt)
+                    </label>
 
-              <button
-                onClick={() => setStep("confirm")}
-                className="w-full py-3 rounded-xl font-semibold transition-all duration-150"
-                style={{ background: "#00d4aa", color: "#080e14", fontFamily: "Outfit, sans-serif" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#00f0c4")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "#00d4aa")}
-              >
-                Gå vidare till bekräftelse →
-              </button>
+                    <textarea
+                        rows={3}
+                        placeholder="Ex: Kundmöte med Acme AB, designworkshop..."
+                        value={purpose}
+                        onChange={(e) => setPurpose(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
+                        style={{
+                          background: "#0d1824",
+                          border: "1px solid #1e3347",
+                          color: "#e2eaf2",
+                        }}
+                    />
+                  </div>
+              )}
+
+              {/* Continue */}
+              <div className="max-w-2xl mt-6 mx-auto">
+                <button
+                    onClick={() => setStep("confirm")}
+                    disabled={!selected}
+                    className="w-full py-3 rounded-xl font-semibold transition-all duration-150"
+                    style={{
+                      background: "#00d4aa",
+                      color: "#080e14",
+                      fontFamily: "Outfit, sans-serif",
+                      opacity: selected ? 1 : 0.4,
+                      cursor: selected ? "pointer" : "not-allowed",
+                    }}
+                >
+                  {selected
+                      ? `Fortsätt med ${selected.label} →`
+                      : "Välj en resurs för att fortsätta"}
+                </button>
+              </div>
             </div>
-          </div>
         )}
 
         {/* Step: Confirm */}

@@ -7,6 +7,7 @@ export type CreateBookingRequest = {
 export type Booking = {
     id: string;
     user: {
+        id: string,
         firstName: string,
         lastName: string,
     }

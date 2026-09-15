@@ -45,6 +45,24 @@ public class AuthService(UserManager<User> userManager,
         return user.ToLoginDto(isAdmin);
     }
 
+    public async Task<bool> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordDto dto)
+    {
+        var user = await userManager.GetUserAsync(principal);
+
+        if (user is null)
+            return false;
+
+        var result = await userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+
+        if (!result.Succeeded)
+            return false;
+
+        user.MustChangePassword = false;
+        var updateResult = await userManager.UpdateAsync(user);
+
+        return updateResult.Succeeded;
+    }
+
     public async Task LogoutAsync()
     {
         await signInManager.SignOutAsync();

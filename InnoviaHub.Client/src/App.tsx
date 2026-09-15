@@ -4,6 +4,7 @@ import BookingPage from "./pages/BookingPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import BottomNav, { type View } from "./components/BottomNav";
+import ChangePasswordModal from "./components/ChangePasswordModal";
 import { getCurrentUser, logout, type LoginResponse } from "../services/authService";
 
 export default function App() {
@@ -42,6 +43,10 @@ export default function App() {
     setView(nextView);
   }
 
+  function handlePasswordChanged() {
+    setUser((currentUser) => currentUser ? { ...currentUser, mustChangePassword: false } : null);
+  }
+
   if (isLoadingUser) {
     return <div className="min-h-screen" style={{ background: "#080e14" }} />;
   }
@@ -67,6 +72,7 @@ export default function App() {
                 }}
               />
             )}
+            {user?.mustChangePassword && <ChangePasswordModal onChanged={handlePasswordChanged} onLogout={handleLogout} />}
       </div>
   );
 }

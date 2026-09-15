@@ -14,7 +14,8 @@ public static class UserMapping
             Email = mdoel.Email ?? string.Empty,
             FirstName = mdoel.FirstName,
             LastName = mdoel.LastName,
-            IsAdmin = isAdmin
+            IsAdmin = isAdmin,
+            MustChangePassword = !isAdmin && mdoel.MustChangePassword
         };
     }
 

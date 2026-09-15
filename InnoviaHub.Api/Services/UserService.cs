@@ -51,6 +51,7 @@ public class UserService(UserManager<User> userManager) : IUserService
             Email = dto.Email,
             FirstName = dto.FirstName,
             LastName = dto.LastName,
+            MustChangePassword = true,
         };
         
         var result = await userManager.CreateAsync(user, dto.Password);

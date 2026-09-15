@@ -32,6 +32,19 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return Ok(result);
     }
+    //Password change for Users
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        var result = await authService.ChangePasswordAsync(User, dto);
+
+        if (!result)
+            return BadRequest("Lösenordet kunde inte ändras.");
+
+        return NoContent();
+    }
 
     [Authorize]
     [HttpPost("logout")]

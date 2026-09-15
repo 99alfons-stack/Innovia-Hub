@@ -9,6 +9,7 @@ export type LoginResponse ={
     firstName:string;
     lastName:string;
     isAdmin:boolean;
+    mustChangePassword: boolean;
 };
 
 export type CurrentUserResponse = {
@@ -17,6 +18,7 @@ export type CurrentUserResponse = {
     firstName: string;
     lastName: string;
     isAdmin: boolean;
+    mustChangePassword: boolean;
 };
 
 type LoginApiResponse = {
@@ -26,6 +28,7 @@ type LoginApiResponse = {
 const API_URL="http://localhost:5193/api/Auth/login";
 const CURRENT_USER_URL="http://localhost:5193/api/Auth/current-user";
 const LOGOUT_URL="http://localhost:5193/api/Auth/logout";
+const CHANGE_PASSWORD_URL="http://localhost:5193/api/Auth/change-password";
 
 export async function login(credentials:LoginRequest):Promise<LoginResponse>
 {
@@ -55,6 +58,7 @@ export async function login(credentials:LoginRequest):Promise<LoginResponse>
         firstName: responseData.user.firstName,
         lastName: responseData.user.lastName,
         isAdmin: responseData.user.isAdmin,
+        mustChangePassword: responseData.user.mustChangePassword,
     };
 }
 
@@ -80,7 +84,21 @@ export async function getCurrentUser(): Promise<LoginResponse | null> {
         firstName: user.firstName,
         lastName: user.lastName,
         isAdmin: user.isAdmin,
+        mustChangePassword: user.mustChangePassword,
     };
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await fetch(CHANGE_PASSWORD_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    if (!response.ok) {
+        throw new Error("Lösenordet kunde inte ändras. Kontrollera det nuvarande lösenordet och kraven för det nya.");
+    }
 }
 
 export async function logout(): Promise<void> {

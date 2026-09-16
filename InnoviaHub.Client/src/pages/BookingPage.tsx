@@ -1,895 +1,312 @@
 import {useEffect, useState} from "react";
 import type {LoginResponse} from "../../services/authService";
 import {
-    createBooking,
-    getAllBookings,
-    type Booking,
+  createBooking,
+  getAllBookings,
+  type Booking,
 } from "../../services/bookingApiService";
 import {
-    getAllResources,
-    getAllResourceTypes,
-    type Resource as ApiResource,
-    type ResourceType,
+  getAllResources,
+  getAllResourceTypes,
+  type Resource as ApiResource,
+  type ResourceType,
 } from "../../services/resourceService";
 import UserAvatar from "../components/UserAvatar";
-import BookingNotification from "../components/BookingNotification";
+import BookingNotification from "../components/Booking/BookingNotification.tsx";
 import {
-    connection,
-    startNotificationConnection,
+  connection,
+  startNotificationConnection,
 } from "../../services/notificationService";
-import BookingCalendar from "../components/BookingCalendar.tsx";
-import {bookingOverlapsSelection, generateTimeSlots, isPastTime, getBookingEndTime} from "../utils/bookingUtils";
-
-type Step = "select" | "configure" | "confirm" | "done";
-
-interface Resource {
-    id: string;
-    type: ResourceType;
-    label: string;
-    sub: string;
-    status: "available" | "booked" | "reserved";
-    features: string[];
-    color: string;
-    icon: string;
-}
+import {
+  bookingOverlapsSelection,
+  generateTimeSlots, isPastTime,
+  getBookingEndTime
+} from "../utils/bookingUtils";
+import BookingStepIndicator from "../components/Booking/BookingStepIndicator.tsx";
+import ResourceTypeSelection from "../components/Booking/ResourceTypeSelection.tsx";
+import BookingConfiguration from "../components/Booking/BookingConfiguration.tsx";
+import BookingOverview from "../components/Booking/BookingOverview.tsx";
+import type { Resource, Step } from "../types/bookingTypes.ts";
+import BookingConfirmation from "../components/Booking/BookingConfirmation.tsx";
 
 const timeSlots = generateTimeSlots(8 * 60, 17 * 60, 15);
 const durations = ["1 timme", "2 timmar", "3 timmar", "Heldag"];
 
 function mapApiResource(resource: ApiResource): Resource {
-    return {
-        id: resource.id,
-        type: resource.resourceType,
-        label: resource.name,
-        sub: `${resource.capacity} ${resource.capacity === 1 ? "plats" : "platser"}`,
-        status: "available",
-        features: [],
-        color: "#3b82f6",
-        icon: "⬜",
-    };
+  return {
+    id: resource.id,
+    type: resource.resourceType,
+    label: resource.name,
+    sub: `${resource.capacity} ${resource.capacity === 1 ? "plats" : "platser"}`,
+    status: "available",
+    features: [],
+    color: "#3b82f6",
+    icon: "⬜",
+  };
 }
 
 export default function BookingPage({user}: { user: LoginResponse | null }) {
-    const [resources, setResources] = useState<Resource[]>([]);
-    const [resourceTypes, setResourceTypes] = useState<ResourceType[] | null>(null);
-    const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
-    const [bookings, setBookings] = useState<Booking[]>([]);
-    const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
-    const [selected, setSelected] = useState<Resource | null>(null);
-    const [step, setStep] = useState<Step>("select");
-    const [timeSlot, setTimeSlot] = useState("");
-    const [duration, setDuration] = useState("1 timmar");
-    const [purpose, setPurpose] = useState("");
-    const [date, setDate] = useState(new Date().toLocaleDateString("se-SE"));
-    const [isBooking, setIsBooking] = useState(false);
-    const [bookingError, setBookingError] = useState<string | null>(null);
-    const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [resourceTypes, setResourceTypes] = useState<ResourceType[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [selected, setSelected] = useState<Resource | null>(null);
+  const [step, setStep] = useState<Step>("select");
+  const [timeSlot, setTimeSlot] = useState("");
+  const [duration, setDuration] = useState("1 timmar");
+  const [purpose, setPurpose] = useState("");
+  const [date, setDate] = useState(new Date().toLocaleDateString("se-SE"));
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
 
-    useEffect(() => {
-        async function loadResources() {
-            try {
-                // Resource IDs from the API are GUIDs, which the booking endpoint requires.
-                const [apiResources, bookings, resourceTypes] = await Promise.all([
-                    getAllResources(),
-                    getAllBookings(),
-                    getAllResourceTypes(),
-                ]);
-                setBookings(bookings);
-                setResourceTypes(resourceTypes);
+  const filtered = resources
+    .filter((r) => r.type.id === selectedTypeId)
+    .sort((a, b) =>
+      a.label.localeCompare(b.label, "sv-SE", {numeric: true})
+    );
 
-                setResources(
-                    apiResources
-                        .filter((resource) => resource.isActive)
-                        .map((resource) => ({
-                            ...mapApiResource(resource),
-                            status: "available",
-                        })),
-                );
-            } catch (error) {
-                setBookingError(error instanceof Error ? error.message : "Kunde inte hämta resurser");
-            }
-        }
+  function handleSelectResourceType(resourceTypeId: string) {
+    setSelectedTypeId(resourceTypeId);
+    setSelected(null);
+    setStep("configure");
+  }
 
-        loadResources();
-    }, []);
+  async function confirmBooking() {
+    if (!selected) return;
 
-    useEffect(() => {
-        setResources((currentResources) =>
-            currentResources.map((resource) => ({
-                ...resource,
-                status: bookings.some((booking) =>
-                    bookingOverlapsSelection(booking, resource.id, date, timeSlot, duration),
-                )
-                    ? "booked"
-                    : "available",
+    const startTime = new Date(`${date}T${timeSlot}:00`);
+    const endTime = getBookingEndTime(startTime, duration);
+
+    setIsBooking(true);
+    setBookingError(null);
+
+    try {
+      const booking = await createBooking({
+        resourceId: selected.id,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+
+      setCreatedBooking(booking);
+      setBookings((currentBookings) => [...currentBookings, booking]);
+      setStep("confirmation");
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : "Bokningen kunde inte skapas");
+    } finally {
+      setIsBooking(false);
+    }
+  }
+
+  function reset() {
+    setSelected(null);
+    setStep("select");
+    setPurpose("");
+    setBookingError(null);
+  }
+
+  useEffect(() => {
+    async function loadResources() {
+      try {
+        const [apiResources, bookings, resourceTypes] = await Promise.all([
+          getAllResources(),
+          getAllBookings(),
+          getAllResourceTypes(),
+        ]);
+        setBookings(bookings);
+        setResourceTypes(resourceTypes);
+
+        setResources(
+          apiResources
+            .filter((resource) => resource.isActive)
+            .map((resource) => ({
+              ...mapApiResource(resource),
+              status: "available",
             })),
         );
-    }, [bookings, date, timeSlot, duration]);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        async function connectToNotifications() {
-            try {
-                connection.on("BookingCreated", (booking) => {
-                    // SignalR-eventet innehåller den bokade resursens databasID.
-                    const resourceId = booking.resource?.id;
-
-                    if (!resourceId) return;
-
-                    setLatestBooking(booking);
-
-                    setBookings((currentBookings) =>
-                        currentBookings.some((currentBooking) => currentBooking.id === booking.id)
-                            ? currentBookings
-                            : [...currentBookings, booking],
-                    );
-                });
-
-                await startNotificationConnection();
-
-                if (!isMounted) return;
-            } catch (error) {
-                console.error("Kunde inte ansluta till SignalR:", error);
-            }
-        }
-
-        connectToNotifications();
-
-        return () => {
-            isMounted = false;
-            connection.off("BookingCreated");
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!latestBooking) return;
-
-        const timeoutId = window.setTimeout(() => setLatestBooking(null), 5000);
-
-        return () => window.clearTimeout(timeoutId);
-    }, [latestBooking]);
-
-    useEffect(() => {
-        const firstAvailableTime = timeSlots.find((time) => !isPastTime(date, time));
-
-        if (firstAvailableTime)
-            setTimeSlot(firstAvailableTime);
-    }, []);
-
-    const filtered = resources
-        .filter((r) => r.type.id === selectedTypeId)
-        .sort((a, b) =>
-            a.label.localeCompare(b.label, "sv-SE", {numeric: true})
-        );
-
-    function reset() {
-        setSelected(null);
-        setStep("select");
-        setPurpose("");
-        setBookingError(null);
+      } catch (error) {
+        setBookingError(error instanceof Error ? error.message : "Kunde inte hämta resurser");
+      }
     }
 
-    async function confirmBooking() {
-        if (!selected) return;
+    loadResources();
+  }, []);
 
-        const startTime = new Date(`${date}T${timeSlot}:00`);
-        const endTime = getBookingEndTime(startTime, duration);
+  useEffect(() => {
+    setResources((currentResources) =>
+      currentResources.map((resource) => ({
+        ...resource,
+        status: bookings.some((booking) =>
+          bookingOverlapsSelection(booking, resource.id, date, timeSlot, duration),
+        )
+          ? "booked"
+          : "available",
+      })),
+    );
+  }, [bookings, date, timeSlot, duration]);
 
-        if (duration === "Heldag") {
-            endTime.setHours(18, 0, 0, 0);
-        } else {
-            const durationHours = Number.parseInt(duration, 10);
-            endTime.setHours(endTime.getHours() + durationHours);
-        }
-        setIsBooking(true);
-        setBookingError(null);
+  useEffect(() => {
+    let isMounted = true;
 
-        try {
-            const booking = await createBooking({
-                resourceId: selected.id,
-                startTime: startTime.toISOString(),
-                endTime: endTime.toISOString(),
-            });
+    async function connectToNotifications() {
+      try {
+        connection.on("BookingCreated", (booking) => {
+          // SignalR-eventet innehåller den bokade resursens databasID.
+          const resourceId = booking.resource?.id;
 
-            setCreatedBooking(booking);
-            setBookings((currentBookings) => [...currentBookings, booking]);
-            setStep("done");
-        } catch (error) {
-            setBookingError(error instanceof Error ? error.message : "Bokningen kunde inte skapas");
-        } finally {
-            setIsBooking(false);
-        }
+          if (!resourceId) return;
+
+          setLatestBooking(booking);
+
+          setBookings((currentBookings) =>
+            currentBookings.some((currentBooking) => currentBooking.id === booking.id)
+              ? currentBookings
+              : [...currentBookings, booking],
+          );
+        });
+
+        await startNotificationConnection();
+
+        if (!isMounted) return;
+      } catch (error) {
+        console.error("Kunde inte ansluta till SignalR:", error);
+      }
     }
 
-    return (
-        <div className="min-h-screen" style={{background: "#080e14"}}>
-            {latestBooking && (
-                <BookingNotification
-                    booking={latestBooking}
-                    onClose={() => setLatestBooking(null)}
-                />
-            )}
-            {/* Header */}
-            <header
-                className="sticky top-0 z-40 flex items-center justify-between px-6 py-4"
-                style={{
-                    background: "rgba(8,14,20,0.9)",
-                    borderBottom: "1px solid #1e3347",
-                    backdropFilter: "blur(16px)",
-                }}
-            >
-                <div className="flex items-center gap-3">
-                    <div
-                        className="rounded-lg flex items-center justify-center"
-                        style={{width: 36, height: 36, background: "linear-gradient(135deg, #00d4aa, #0070f3)"}}
-                    >
-                        <span style={{fontSize: 18}}>◈</span>
-                    </div>
-                    <span className="text-xl font-bold" style={{fontFamily: "Outfit, sans-serif", color: "#e2eaf2"}}>
+    connectToNotifications();
+
+    return () => {
+      isMounted = false;
+      connection.off("BookingCreated");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!latestBooking) return;
+
+    const timeoutId = window.setTimeout(() => setLatestBooking(null), 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [latestBooking]);
+
+  useEffect(() => {
+    const firstAvailableTime = timeSlots.find((time) => !isPastTime(date, time));
+
+    if (firstAvailableTime)
+      setTimeSlot(firstAvailableTime);
+  }, []);
+
+  return (
+    <div className="min-h-screen" style={{background: "#080e14"}}>
+      {latestBooking && (
+        <BookingNotification
+          booking={latestBooking}
+          onClose={() => setLatestBooking(null)}
+        />
+      )}
+      <header
+        className="sticky top-0 z-40 flex items-center justify-between px-6 py-4"
+        style={{
+          background: "rgba(8,14,20,0.9)",
+          borderBottom: "1px solid #1e3347",
+          backdropFilter: "blur(16px)",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="rounded-lg flex items-center justify-center"
+            style={{width: 36, height: 36, background: "linear-gradient(135deg, #00d4aa, #0070f3)"}}
+          >
+            <span style={{fontSize: 18}}>◈</span>
+          </div>
+          <span className="text-xl font-bold" style={{fontFamily: "Outfit, sans-serif", color: "#e2eaf2"}}>
             Innovia<span style={{color: "#00d4aa"}}>Hub</span>
           </span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <UserAvatar user={user}/>
-                    <span className="text-sm" style={{color: "#7a94aa"}}>
+        </div>
+        <div className="flex items-center gap-3">
+          <UserAvatar user={user}/>
+          <span className="text-sm" style={{color: "#7a94aa"}}>
             Inloggad som <span style={{color: "#e2eaf2"}}>{user?.firstName} {user?.lastName}</span>
           </span>
-                </div>
-            </header>
-
-            <div className="max-w-6xl mx-auto px-6 pt-8 pb-32">
-                {/* Step indicator */}
-                <div className="flex items-center gap-3 mb-8">
-                    {(["select", "configure", "confirm", "done"] as Step[]).map((s, i) => {
-                        const labels = ["Välj resurs", "Konfigurera", "Bekräfta", "Klart"];
-                        const stepIdx = ["select", "configure", "confirm", "done"].indexOf(step);
-                        const isActive = s === step;
-                        const isDone = i < stepIdx;
-                        return (
-                            <div key={s} className="flex items-center gap-2">
-                                <div className="flex items-center gap-2"
-                                     style={{opacity: isDone || isActive ? 1 : 0.4}}>
-                                    <div
-                                        className="rounded-full flex items-center justify-center text-xs font-bold mono"
-                                        style={{
-                                            width: 24, height: 24,
-                                            background: isDone ? "#00d4aa" : isActive ? "#00d4aa" : "#1e3347",
-                                            color: isDone || isActive ? "#080e14" : "#7a94aa",
-                                        }}>
-                                        {isDone ? "✓" : i + 1}
-                                    </div>
-                                    <span className="hidden sm:block text-sm" style={{
-                                        color: isActive ? "#e2eaf2" : "#7a94aa",
-                                        fontFamily: "Outfit, sans-serif"
-                                    }}>
-                    {labels[i]}
-                  </span>
-                                </div>
-                                {i < 3 && (
-                                    <div className="w-8 h-px"
-                                         style={{background: i < stepIdx ? "#00d4aa" : "#1e3347"}}/>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Step: Select */}
-                {step === "select" && (
-                    <div className="max-w-5xl mx-auto">
-                        <div className="mb-8">
-                            <h1
-                                className="text-3xl font-bold mb-2"
-                                style={{
-                                    color: "#e2eaf2",
-                                    fontFamily: "Outfit, sans-serif",
-                                }}>
-                                Vad vill du boka?
-                            </h1>
-                            <p className="text-sm"
-                               style={{color: "#7a94aa"}}>
-                                Välj en resurstyp för att se tillgängliga tider och resurser.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {resourceTypes?.map((type) => (
-                                <button
-                                    key={type.id}
-                                    onClick={() => {
-                                        setSelectedTypeId(type.id);
-                                        setSelected(null);
-                                        setStep("configure");
-                                    }}
-                                    className="rounded-2xl p-7 text-left transition-all duration-200 min-h-45 flex flex-col justify-between"
-                                    style={{
-                                        background: "#0d1824",
-                                        border: "1px solid #1e3347",
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = "#00d4aa";
-                                        e.currentTarget.style.transform = "translateY(-2px)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = "#1e3347";
-                                        e.currentTarget.style.transform = "translateY(0)";
-                                    }}>
-                                    <div>
-                                        <div
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                                            style={{
-                                                background: "rgba(0,212,170,0.10)",
-                                                color: "#00d4aa",
-                                                fontSize: "20px",
-                                            }}>
-                                            ◈
-                                        </div>
-                                        <h3 className="text-xl font-semibold mb-2"
-                                            style={{
-                                                color: "#e2eaf2",
-                                                fontFamily: "Outfit, sans-serif",
-                                            }}>
-                                            {type.name}
-                                        </h3>
-                                        <p className="text-sm leading-6"
-                                           style={{color: "#7a94aa"}}>
-                                            {type.description || "Visa tillgängliga resurser"}
-                                        </p>
-                                    </div>
-                                    <div className="mt-6 text-sm font-medium"
-                                         style={{color: "#00d4aa"}}>
-                                        Välj →
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Step: Configure */}
-                {step === "configure" && selectedTypeId && (
-                    <div>
-                        <button onClick={reset}
-                                className="flex items-center gap-2 mb-6 text-sm"
-                                style={{color: "#7a94aa"}}>
-                            ← Tillbaka
-                        </button>
-                        <h1 className="text-2xl font-bold mb-2"
-                            style={{
-                                fontFamily: "Outfit, sans-serif",
-                                color: "#e2eaf2",
-                            }}>
-                            Konfigurera bokning
-                        </h1>
-                        <p className="text-sm mb-8"
-                           style={{color: "#7a94aa"}}>
-                            Välj datum, starttid och längd. Välj sedan en ledig resurs.
-                        </p>
-                        <div className="grid lg:grid-cols-[360px_1fr] gap-8">
-
-                            {/* Vänster sida - datum och tid */}
-                            <div className="space-y-6 rounded-xl p-5"
-                                 style={{
-                                     background: "#0d1824",
-                                     border: "1px solid #1e3347",
-                                 }}>
-
-                                {/* Date */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-2"
-                                           style={{
-                                               color: "#e2eaf2",
-                                               fontFamily: "Outfit, sans-serif",
-                                           }}>
-                                        Datum
-                                    </label>
-                                    <BookingCalendar
-                                        selectedDate={date}
-                                        onSelectDate={(newDate) => {
-                                            setDate(newDate);
-                                            setSelected(null);
-                                        }}/>
-                                </div>
-
-                                {/* Duration */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-2"
-                                           style={{
-                                               color: "#e2eaf2",
-                                               fontFamily: "Outfit, sans-serif",
-                                           }}>
-                                        Längd
-                                    </label>
-                                    <div className="flex gap-2 flex-wrap">
-                                        {durations.map((d) => (
-                                            <button
-                                                key={d}
-                                                onClick={() => {
-                                                    setDuration(d);
-                                                    setSelected(null);
-                                                }}
-                                                className="px-4 py-2 rounded-lg text-sm transition-all duration-150"
-                                                style={{
-                                                    background:
-                                                        duration === d
-                                                            ? "rgba(0,212,170,0.15)"
-                                                            : "#0d1824",
-                                                    border: `1px solid ${
-                                                        duration === d ? "#00d4aa" : "#1e3347"
-                                                    }`,
-                                                    color:
-                                                        duration === d ? "#00d4aa" : "#7a94aa",
-                                                    fontFamily: "Outfit, sans-serif",
-                                                }}>
-                                                {d}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Time slot */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-2"
-                                           style={{
-                                               color: "#e2eaf2",
-                                               fontFamily: "Outfit, sans-serif",
-                                           }}>
-                                        Starttid
-                                    </label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {timeSlots.map((t) => {
-                                            const isPast = isPastTime(date, t);
-                                            return (
-                                                <button key={t}
-                                                        onClick={() => {
-                                                            if (isPast) return;
-
-                                                            setTimeSlot(t);
-                                                            setSelected(null);
-                                                        }}
-                                                        disabled={isPast}
-                                                        className="px-3 py-2 rounded-lg text-sm mono transition-all duration-150"
-                                                        style={{
-                                                            background:
-                                                                timeSlot === t
-                                                                    ? "rgba(0,212,170,0.15)"
-                                                                    : "#0d1824",
-                                                            border: `1px solid ${
-                                                                timeSlot === t ? "#00d4aa" : "#1e3347"
-                                                            }`,
-                                                            color: isPast
-                                                                ? "#405060"
-                                                                : timeSlot === t
-                                                                    ? "#00d4aa"
-                                                                    : "#7a94aa",
-                                                            opacity: isPast ? 0.4 : 1,
-                                                            cursor: isPast ? "not-allowed" : "pointer",
-                                                        }}
-                                                >
-                                                    {t}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Status */}
-                                <div className="flex items-center gap-4">
-                                    {[
-                                        {color: "#00d4aa", label: "Ledig"},
-                                        {color: "#f43f5e", label: "Bokad"},
-                                        {color: "#f59e0b", label: "Reserverad"},
-                                    ].map((l) => (
-                                        <div key={l.label}
-                                             className="flex items-center gap-1.5">
-                                            <div className="w-2.5 h-2.5 rounded-full"
-                                                 style={{background: l.color}}/>
-                                            <span className="text-xs"
-                                                  style={{color: "#7a94aa"}}>
-                                                {l.label}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Höger sida - resurser */}
-                            <div
-                                className="rounded-xl p-5 self-start"
-                                style={{
-                                    background: "#0d1824",
-                                    border: "1px solid #1e3347",
-                                }}>
-                                <h2
-                                    className="text-lg font-semibold mb-4"
-                                    style={{
-                                        color: "#e2eaf2",
-                                        fontFamily: "Outfit, sans-serif",
-                                    }}>
-                                    Resurser
-                                </h2>
-                                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {filtered.map((r) => {
-                                        const avail = r.status === "available";
-                                        const isSelected = selected?.id === r.id;
-                                        return (
-                                            <button
-                                                key={r.id}
-                                                onClick={() => avail && setSelected(r)}
-                                                disabled={!avail}
-                                                className="rounded-xl p-5 text-left transition-all duration-150"
-                                                style={{
-                                                    background: "#111e2d",
-                                                    border: `1px solid ${
-                                                        isSelected ? "#00d4aa" : "#1e3347"
-                                                    }`,
-                                                    opacity: avail ? 1 : 0.5,
-                                                    cursor: avail ? "pointer" : "not-allowed",
-                                                    boxShadow: isSelected
-                                                        ? "0 0 0 1px rgba(0,212,170,0.15)"
-                                                        : "none",
-                                                }}>
-                                                <div className="text-sm font-semibold mb-1"
-                                                     style={{color: "#e2eaf2"}}>
-                                                    {r.label}
-                                                </div>
-                                                <div
-                                                    className="text-xs mb-3"
-                                                    style={{color: "#7a94aa"}}>
-                                                    {r.sub}
-                                                </div>
-                                                <span className="inline-block px-2 py-0.5 rounded-full text-xs"
-                                                      style={{
-                                                          background: avail
-                                                              ? "rgba(0,212,170,0.1)"
-                                                              : "rgba(244,63,94,0.1)",
-                                                          color: avail ? "#00d4aa" : "#f43f5e",
-                                                      }}>
-                                                    {avail ? "Ledig" : "Bokad"}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {filtered.length === 0 && (
-                                    <div className="rounded-xl p-6 text-sm mt-3"
-                                         style={{
-                                             background: "#0d1824",
-                                             border: "1px solid #1e3347",
-                                             color: "#7a94aa",
-                                         }}>
-                                        Det finns inga resurser för den valda typen.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Purpose */}
-                        {selected && (
-                            <div className="max-w-2xl mt-8 mx-auto">
-                                <label
-                                    className="block text-sm font-medium mb-2"
-                                    style={{
-                                        color: "#e2eaf2",
-                                        fontFamily: "Outfit, sans-serif",
-                                    }}>
-                                    Syfte (valfritt)
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    placeholder="Ex: Kundmöte med Acme AB, designworkshop..."
-                                    value={purpose}
-                                    onChange={(e) => setPurpose(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
-                                    style={{
-                                        background: "#0d1824",
-                                        border: "1px solid #1e3347",
-                                        color: "#e2eaf2",
-                                    }}
-                                />
-                            </div>
-                        )}
-
-                        {/* Continue */}
-                        <div className="max-w-2xl mt-6 mx-auto">
-                            <button onClick={() => setStep("confirm")}
-                                    disabled={!selected}
-                                    className="w-full py-3 rounded-xl font-semibold transition-all duration-150"
-                                    style={{
-                                        background: "#00d4aa",
-                                        color: "#080e14",
-                                        fontFamily: "Outfit, sans-serif",
-                                        opacity: selected ? 1 : 0.4,
-                                        cursor: selected ? "pointer" : "not-allowed",
-                                    }}>
-                                {selected
-                                    ? `Fortsätt med ${selected.label} →`
-                                    : "Välj en resurs för att fortsätta"}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step: Confirm */}
-                {step === "confirm" && selected && (
-                    <div className="max-w-lg">
-                        <button onClick={() => setStep("configure")} className="flex items-center gap-2 mb-6 text-sm"
-                                style={{color: "#7a94aa"}}>
-                            ← Tillbaka
-                        </button>
-                        <h1 className="text-2xl font-bold mb-6"
-                            style={{fontFamily: "Outfit, sans-serif", color: "#e2eaf2"}}>
-                            Bekräfta bokning
-                        </h1>
-
-                        <div className="rounded-xl p-6 mb-6"
-                             style={{background: "#0d1824", border: "1px solid #1e3347"}}>
-                            <div className="flex items-center gap-3 mb-5 pb-5"
-                                 style={{borderBottom: "1px solid #1e3347"}}>
-                                <div
-                                    className="rounded-xl flex items-center justify-center text-2xl"
-                                    style={{
-                                        width: 52,
-                                        height: 52,
-                                        background: selected.color + "18",
-                                        color: selected.color
-                                    }}>
-                                    {selected.icon}
-                                </div>
-                                <div>
-                                    <div className="font-bold text-lg" style={{
-                                        fontFamily: "Outfit, sans-serif",
-                                        color: "#e2eaf2"
-                                    }}>{selected.label}</div>
-                                    <div className="text-sm" style={{color: "#7a94aa"}}>{selected.sub}</div>
-                                </div>
-                            </div>
-
-                            {[
-                                {
-                                    label: "Datum",
-                                    value: new Date(date).toLocaleDateString("sv-SE", {
-                                        weekday: "long",
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric"
-                                    })
-                                },
-                                {label: "Starttid", value: timeSlot},
-                                {
-                                    label: "Sluttid",
-                                    value: getBookingEndTime(new Date(`${date}T${timeSlot}:00`), duration).toLocaleTimeString("sv-SE", {
-                                        hour: "2-digit",
-                                        minute: "2-digit"
-                                    })
-                                },
-                                {label: "Längd", value: duration},
-                                {label: "Bokad av", value: `${user?.firstName} ${user?.lastName}`.trim()},
-                                ...(purpose ? [{label: "Syfte", value: purpose}] : []),
-                            ].map((row) => (
-                                <div key={row.label} className="flex justify-between items-start py-2.5"
-                                     style={{borderBottom: "1px solid #1e3347"}}>
-                                    <span className="text-sm" style={{color: "#7a94aa"}}>{row.label}</span>
-                                    <span className="text-sm font-medium text-right max-w-xs" style={{
-                                        color: "#e2eaf2",
-                                        fontFamily: row.label === "Starttid" || row.label === "Sluttid" ? "JetBrains Mono, monospace" : "inherit"
-                                    }}>
-                                    {row.value}
-                                </span>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="rounded-xl px-4 py-3 mb-6 flex items-start gap-3"
-                             style={{background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.2)"}}>
-                            <span style={{color: "#00d4aa", fontSize: 16, marginTop: 1}}>ℹ</span>
-                            <p className="text-sm" style={{color: "#7a94aa", lineHeight: 1.6}}>
-                                Du får en bekräftelse via e-post och kan se din bokning i aktivitetsloggen. Avbokning är
-                                möjlig upp till 1 timme innan.
-                            </p>
-                        </div>
-                        {bookingError && (
-                            <p className="text-sm mb-6" style={{color: "#f43f5e"}}>
-                                {bookingError}
-                            </p>
-                        )}
-                        <div className="flex gap-3">
-                            <button
-                                onClick={reset}
-                                className="flex-1 py-3 rounded-xl font-semibold text-sm"
-                                style={{
-                                    background: "#111e2d",
-                                    border: "1px solid #1e3347",
-                                    color: "#7a94aa",
-                                    fontFamily: "Outfit, sans-serif"
-                                }}>
-                                Avbryt
-                            </button>
-                            <button
-                                onClick={confirmBooking}
-                                disabled={isBooking}
-                                className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all duration-150"
-                                style={{
-                                    background: "#00d4aa",
-                                    color: "#080e14",
-                                    fontFamily: "Outfit, sans-serif",
-                                    opacity: isBooking ? 0.6 : 1
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = "#00f0c4")}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = "#00d4aa")}>
-                                {isBooking ? "Skapar bokning..." : "Bekräfta bokning ✓"}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step: Done */}
-                {step === "done" && selected && (
-                    <div className="max-w-xl mx-auto py-12 p-3">
-
-                        {/* Success icon */}
-                        <div className="text-center mb-8">
-                            <div
-                                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 animate-glow"
-                                style={{
-                                    background: "rgba(0,212,170,0.12)",
-                                    border: "2px solid rgba(0,212,170,0.35)",
-                                }}>
-                                <span style={{fontSize: 36, color: "#00d4aa"}}>✓</span>
-                            </div>
-                            <h1
-                                className="text-3xl font-bold mb-2"
-                                style={{
-                                    fontFamily: "Outfit, sans-serif",
-                                    color: "#e2eaf2",
-                                }}>
-                                Bokning bekräftad!
-                            </h1>
-                            <p className="text-sm"
-                               style={{color: "#7a94aa"}}>
-                                Din bokning har skapats och är nu reserverad.
-                            </p>
-                        </div>
-
-                        {/* Booking details */}
-                        <div className="rounded-2xl p-6 mb-6"
-                             style={{
-                                 background: "#0d1824",
-                                 border: "1px solid #1e3347",
-                             }}>
-                            <div className="flex items-center justify-between pb-5 mb-5"
-                                 style={{borderBottom: "1px solid #1e3347"}}>
-                                <div>
-                                    <p className="text-xs mb-1"
-                                       style={{color: "#7a94aa"}}>
-                                        Resurs
-                                    </p>
-                                    <h2 className="text-lg font-semibold"
-                                        style={{
-                                            color: "#e2eaf2",
-                                            fontFamily: "Outfit, sans-serif",
-                                        }}>
-                                        {selected.label}
-                                    </h2>
-                                    <p className="text-sm mt-1"
-                                       style={{color: "#7a94aa"}}>
-                                        {selected.sub}
-                                    </p>
-                                </div>
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                                     style={{
-                                         background: "rgba(0,212,170,0.10)",
-                                         color: "#00d4aa",
-                                         fontSize: 22,
-                                     }}>
-                                    {selected.icon}
-                                </div>
-                            </div>
-
-                            {createdBooking?.id && (
-                                <div className="mb-6">
-                                    <p
-                                        className="text-xs mb-2"
-                                        style={{color: "#7a94aa"}}
-                                    >
-                                        Boknings-ID
-                                    </p>
-
-                                    <div
-                                        className="mono text-sm px-3 py-2 rounded-lg"
-                                        style={{
-                                            background: "#111e2d",
-                                            border: "1px solid #1e3347",
-                                            color: "#00d4aa",
-                                        }}
-                                    >
-                                        {createdBooking.id}
-                                    </div>
-                                </div>
-                            )}
-
-                            {[
-                                {
-                                    label: "Datum",
-                                    value: new Date(date).toLocaleDateString("sv-SE", {
-                                        weekday: "long",
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric",
-                                    }),
-                                },
-                                {
-                                    label: "Tid",
-                                    value: `${timeSlot} - ${getBookingEndTime(
-                                        new Date(`${date}T${timeSlot}:00`),
-                                        duration
-                                    ).toLocaleTimeString("sv-SE", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}`,
-                                },
-                                {
-                                    label: "Längd",
-                                    value: duration,
-                                },
-                                {
-                                    label: "Bokad av",
-                                    value: `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim(),
-                                },
-                            ].map((row) => (
-                                <div
-                                    key={row.label}
-                                    className="flex items-center justify-between py-3"
-                                    style={{borderBottom: "1px solid #1e3347"}}>
-                                    <span className="text-sm"
-                                          style={{color: "#7a94aa"}}>
-                                        {row.label}
-                                      </span>
-                                    <span className="text-sm font-medium text-right"
-                                          style={{
-                                              color: "#e2eaf2",
-                                              fontFamily:
-                                                  row.label === "Tid"
-                                                      ? "JetBrains Mono, monospace"
-                                                      : "inherit",
-                                          }}>
-                                        {row.value}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-3">
-                            <button
-                                onClick={reset}
-                                className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all"
-                                style={{
-                                    background: "#00d4aa",
-                                    color: "#080e14",
-                                    fontFamily: "Outfit, sans-serif",
-                                }}
-                            >
-                                + Boka en till
-                            </button>
-
-                            <button
-                                className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all"
-                                style={{
-                                    background: "#111e2d",
-                                    border: "1px solid #1e3347",
-                                    color: "#e2eaf2",
-                                    fontFamily: "Outfit, sans-serif",
-                                }}
-                            >
-                                Mina bokningar
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
         </div>
-    );
+      </header>
+
+      <div className="max-w-6xl mx-auto px-6 pt-8 pb-32">
+        <BookingStepIndicator step={step} />
+
+        {step === "select" && (
+          <ResourceTypeSelection
+            resourceTypes={resourceTypes}
+            onSelectResourceType={handleSelectResourceType}
+          />
+        )}
+
+        {step === "configure" && (
+          <BookingConfiguration
+            date={date}
+            duration={duration}
+            timeSlot={timeSlot}
+            timeSlots={timeSlots}
+            durations={durations}
+            resources={filtered}
+            selected={selected}
+            purpose={purpose}
+            isPastTime={isPastTime}
+            onDateChange={(newDate) => {
+              setDate(newDate);
+              setSelected(null);
+            }}
+            onDurationChange={(newDuration) => {
+              setDuration(newDuration);
+              setSelected(null);
+            }}
+            onTimeSlotChange={(newTimeSlot) => {
+              setTimeSlot(newTimeSlot);
+              setSelected(null);
+            }}
+            onSelectResource={setSelected}
+            onPurposeChange={setPurpose}
+            onBack={() => setStep("select")}
+            onContinue={() => setStep("overview")}
+          />
+        )}
+
+        {step === "overview" && selected && (
+          <BookingOverview
+            selected={selected}
+            date={date}
+            timeSlot={timeSlot}
+            duration={duration}
+            purpose={purpose}
+            user={user}
+            bookingError={bookingError}
+            isBooking={isBooking}
+            onBack={() => setStep("configure")}
+            onCancel={reset}
+            onConfirm={confirmBooking}
+          />
+        )}
+
+        {step === "confirmation" && selected && createdBooking && (
+          <BookingConfirmation
+            selected={selected}
+            createdBooking={createdBooking}
+            date={date}
+            timeSlot={timeSlot}
+            duration={duration}
+            user={user}
+            onBookAnother={() => {
+              setStep("select");
+              setSelected(null);
+              setDate("");
+              setDuration("");
+              setTimeSlot("");
+              setPurpose("");
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
 }

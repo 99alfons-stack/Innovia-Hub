@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect} from "react";
 import type { LoginResponse } from "../../services/authService";
 import UserAvatar from "../components/UserAvatar";
 import { getAllUsers } from "../../services/userService";
@@ -121,6 +121,13 @@ export default function LandingPage({ onBook, user }: { onBook: () => void; user
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setDataVersion((version) => version + 1);
+    }, 30_000);
+    return () => window.clearInterval(id)
+  }, []);
+
   const hour = new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 
   return (
@@ -215,7 +222,7 @@ export default function LandingPage({ onBook, user }: { onBook: () => void; user
           </h2>
           <div className="flex items-center gap-2">
           <LiveDot/>
-          <span className="text-xs mono" style={{color: "#7a94aa"}}>Realtidsuppdatering aktiv</span>
+          <span className="text-xs mono" style={{color: "#7a94aa"}}>Realtidsuppdatering aktiv, uppdaterar var 30s</span>
           </div>
         </div>
 

@@ -17,19 +17,20 @@ type BookingOverviewProps = {
   onConfirm: () => void;
 };
 
-export default function BookingOverview({
-                                          selected,
-                                          date,
-                                          timeSlot,
-                                          duration,
-                                          purpose,
-                                          user,
-                                          bookingError,
-                                          isBooking,
-                                          onBack,
-                                          onCancel,
-                                          onConfirm,
-                                        }: BookingOverviewProps) {
+export default function BookingOverview(
+  {
+    selected,
+    date,
+    timeSlot,
+    duration,
+    purpose,
+    user,
+    bookingError,
+    isBooking,
+    onBack,
+    onCancel,
+    onConfirm,
+  }: BookingOverviewProps) {
   return (
     <div>
       <button

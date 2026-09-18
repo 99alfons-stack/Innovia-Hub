@@ -1,6 +1,6 @@
 ﻿import type {Resource} from "../../types/bookingTypes";
-import type {LoginResponse} from "../../../services/authService";
-import type {Booking} from "../../../services/bookingApiService";
+import type {LoginResponse} from "../../services/authService";
+import type {Booking} from "../../services/bookingApiService";
 import {getBookingEndTime} from "../../utils/bookingUtils";
 
 type BookingConfirmationProps = {

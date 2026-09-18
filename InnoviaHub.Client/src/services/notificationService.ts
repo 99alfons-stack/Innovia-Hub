@@ -2,9 +2,10 @@ import {
     HubConnectionBuilder,
     HubConnectionState,
 } from "@microsoft/signalr";
+import { BASE_API_URL} from "../config/api.ts";
 
 const connection = new HubConnectionBuilder()
-    .withUrl("http://localhost:5193/hubs/notifications", {
+    .withUrl(`${BASE_API_URL}/hubs/notifications`, {
         withCredentials: true,
     })
     .withAutomaticReconnect()

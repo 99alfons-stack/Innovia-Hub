@@ -1,4 +1,4 @@
-import type { Booking } from "../../../services/bookingApiService.ts";
+import type { Booking } from "../../services/bookingApiService.ts";
 
 type BookingNotificationProps = {
   booking: Booking;

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { changePassword } from "../../services/authService";
+import { changePassword } from "../services/authService";
 
 type ChangePasswordModalProps = {
   onChanged: () => void;

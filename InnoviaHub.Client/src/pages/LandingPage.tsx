@@ -1,10 +1,10 @@
 import { useState, useEffect} from "react";
-import type { LoginResponse } from "../../services/authService";
+import type { LoginResponse } from "../services/authService";
 import UserAvatar from "../components/UserAvatar";
-import { getAllUsers } from "../../services/userService";
-import { getAllBookings, type Booking } from "../../services/bookingApiService";
-import { getAllResources, type Resource } from "../../services/resourceService";
-import { connection, startNotificationConnection } from "../../services/notificationService";
+import { getAllUsers } from "../services/userService";
+import { getAllBookings, type Booking } from "../services/bookingApiService";
+import { getAllResources, type Resource } from "../services/resourceService";
+import { connection, startNotificationConnection } from "../services/notificationService";
 
 export function LiveDot({ color = "#00d4aa" }: { color?: string }) {
   return (

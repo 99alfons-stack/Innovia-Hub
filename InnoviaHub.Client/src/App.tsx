@@ -5,7 +5,7 @@ import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import BottomNav, { type View } from "./components/BottomNav";
 import ChangePasswordModal from "./components/ChangePasswordModal";
-import { getCurrentUser, logout, type LoginResponse } from "../services/authService";
+import { getCurrentUser, logout, type LoginResponse } from "./services/authService";
 
 export default function App() {
   const [view, setView] = useState<View>("login");

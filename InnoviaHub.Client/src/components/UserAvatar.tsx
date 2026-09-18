@@ -1,4 +1,4 @@
-import type { LoginResponse } from "../../services/authService";
+import type { LoginResponse } from "../services/authService";
 
 export default function UserAvatar({ user }: { user: LoginResponse | null }) {
   const initials = user

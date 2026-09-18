@@ -11,12 +11,15 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var frontendUrl = builder.Configuration["FRONTEND_URL"]
+    ?? "http://localhost:5173";
+
 builder.Services.AddCors(options =>
 {
    options.AddPolicy("Frontend",policy =>
    {
        policy
-       .WithOrigins("http://localhost:5173")
+       .WithOrigins(frontendUrl)
        .AllowAnyHeader()
        .AllowAnyMethod()
        .AllowCredentials();

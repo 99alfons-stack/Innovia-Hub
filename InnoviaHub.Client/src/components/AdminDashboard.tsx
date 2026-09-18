@@ -1,5 +1,5 @@
 import Alert from "./Alert";
-import type { Booking } from "../../services/bookingApiService";
+import type { Booking } from "../services/bookingApiService";
 
 type AdminDashboardProps = {
   alerts: number;

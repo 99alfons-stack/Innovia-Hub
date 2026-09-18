@@ -1,0 +1,20 @@
+﻿@BASE_URL = http://localhost:5193
+
+@EMAIL = admin@innoviahub.se
+@PASSWORD = Admin1234!
+
+### CURRENT USER - Get current logged in used
+GET {{BASE_URL}}/api/Auth/current-user
+Accept: application/json
+
+### LOGIN
+POST {{BASE_URL}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "{{EMAIL}}",
+  "password": "{{PASSWORD}}"
+}
+
+### LOGOUT
+POST {{BASE_URL}}/api/Auth/logout

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="InnoviaHub.Api/InnoviaHub.Api.csproj" />
+  <Project Path="InnoviaHub.DataAccess/InnoviaHub.DataAccess.csproj" />
+  <Project Path="InnoviaHub.Shared/InnoviaHub.Shared.csproj" />
+</Solution>

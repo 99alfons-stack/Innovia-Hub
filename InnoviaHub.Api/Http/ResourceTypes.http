@@ -1,0 +1,35 @@
+﻿@BASE_URL = http://localhost:5193
+
+@RESOURCE_TYPE_ID = RESOURCE_TYPE_ID
+@NAME = VR-Headset
+@DESCRIPTION = VR-headset för virtuella upplevelser och interaktiva projekt.
+
+### RESOURCE TYPES - Get all resource types
+GET {{BASE_URL}}/api/ResourceTypes
+Accept: application/json
+
+### RESOURCE TYPE - Get resource type by id
+GET {{BASE_URL}}/api/{{RESOURCE_TYPE_ID}}
+Accept: application/json
+
+### CREATE - Create resource type
+POST {{BASE_URL}}/api/ResourceTypes
+Content-Type: application/json
+
+{
+  "name": "{{NAME}}",
+  "description": "{{DESCRIPTION}}"
+}
+
+### UPDATE - Update resource type
+PUT {{BASE_URL}}/api/ResourceTypes/{{RESOURCE_TYPE_ID}}
+Content-Type: application/json
+
+{
+  "name": "{{NAME}}",
+  "description": "{{DESCRIPTION}}"
+}
+
+### DETELE - Delete resource type
+DELETE {{BASE_URL}}/api/ResourceTypes/{{RESOURCE_TYPE_ID}}
+Accept: application/json

@@ -1,0 +1,41 @@
+﻿@BASE_URL = http://localhost:5193
+
+### Variabler - ändra värden för att testa
+@USER_ID = USER_ID
+@EMAIL = test@innoviahub.se
+@PASSWORD = Test1234!
+@FIRST_NAME = Test
+@LAST_NAME = User
+
+### USERS - Get all users
+GET {{BASE_URL}}/api/Users
+Accept: application/json
+
+### USER - Get user by id
+GET {{BASE_URL}}/api/Users/{{USER_ID}}
+Accept: application/json
+
+### CREATE - Create user
+POST {{BASE_URL}}/api/Users
+Content-Type: application/json
+
+{
+  "email": "{{EMAIL}}",
+  "password": "{{PASSWORD}}",
+  "firstName": "{{FIRST_NAME}}",
+  "lastName": "{{LAST_NAME}}"
+}
+
+### UPDATE - Update user
+PUT {{BASE_URL}}/api/Users/{{USER_ID}}
+Content-Type: application/json
+
+{
+  "email": "{{EMAIL}}",
+  "firstName": "{{FIRST_NAME}}",
+  "lastName": "{{LAST_NAME}}"
+}
+
+### DELETE - Delete user
+DELETE {{BASE_URL}}/api/Users/{{USER_ID}}
+Accept: application/json

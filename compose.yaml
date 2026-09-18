@@ -1,0 +1,15 @@
+﻿services:
+  postgres:
+    image: postgres:17
+    container_name: ${CONTAINER_NAME}
+    environment:
+      POSTGRES_DB: ${DATABASE}
+      POSTGRES_USER: ${USERNAME}
+      POSTGRES_PASSWORD: ${PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - innoviahub_data:/var/lib/postgresql/data
+
+volumes:
+  innoviahub_data:

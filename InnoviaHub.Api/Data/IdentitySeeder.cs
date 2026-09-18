@@ -7,8 +7,7 @@ namespace InnoviaHub.Api.Data;
 public static class IdentitySeeder
 {
     public static async Task SeedRolesAsync(
-    RoleManager<IdentityRole<Guid>> roleManager
-    IConfiguration configuration)
+    RoleManager<IdentityRole<Guid>> roleManager)
     {
         foreach (var role in Enum.GetValues<UserRoles>())
         {
@@ -21,7 +20,9 @@ public static class IdentitySeeder
         }
     }
 
-    public static async Task SeedAdminAsync(UserManager<User> userManager)
+    public static async Task SeedAdminAsync(
+    UserManager<User> userManager,
+    IConfiguration configuration)
     {
         var admins = await userManager.GetUsersInRoleAsync(UserRoles.Admin.ToString());
         

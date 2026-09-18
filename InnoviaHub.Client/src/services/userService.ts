@@ -1,3 +1,5 @@
+import { BASE_API_URL } from "../config/api.ts";
+
 export type UserApiModel = {
     id: string,
     email: string;
@@ -20,7 +22,7 @@ export type CreateUserRequest = {
     lastName: string;
 };
 
-const API_URL = "http://localhost:5193/api/Users";
+const API_URL = `${BASE_API_URL}/api/Users`;
 
 //Hämta alla users
 export async function getAllUsers(): Promise<UserSummary[]> {

@@ -1,22 +1,22 @@
 import {useEffect, useState} from "react";
-import type {LoginResponse} from "../../services/authService";
+import type {LoginResponse} from "../services/authService";
 import {
   createBooking,
   getAllBookings,
   type Booking,
-} from "../../services/bookingApiService";
+} from "../services/bookingApiService";
 import {
   getAllResources,
   getAllResourceTypes,
   type Resource as ApiResource,
   type ResourceType,
-} from "../../services/resourceService";
+} from "../services/resourceService";
 import UserAvatar from "../components/UserAvatar";
 import BookingNotification from "../components/Booking/BookingNotification.tsx";
 import {
   connection,
   startNotificationConnection,
-} from "../../services/notificationService";
+} from "../services/notificationService";
 import {
   bookingOverlapsSelection,
   generateTimeSlots, isPastTime,

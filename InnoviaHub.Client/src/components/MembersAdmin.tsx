@@ -6,7 +6,7 @@ import {
   deleteUser,
   getAllUsers,
   type UserSummary,
-} from "../../services/userService";
+} from "../services/userService";
 
 type MemberForm = {
   firstname: string;

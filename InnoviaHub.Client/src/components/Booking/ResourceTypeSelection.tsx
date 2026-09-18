@@ -1,4 +1,4 @@
-﻿import type { ResourceType } from '../../../services/resourceService';
+﻿import type { ResourceType } from '../../services/resourceService';
 
 type ResourceTypeSelectionProps = {
   resourceTypes: ResourceType[];

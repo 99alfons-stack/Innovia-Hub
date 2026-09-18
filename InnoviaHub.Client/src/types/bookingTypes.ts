@@ -1,4 +1,4 @@
-﻿import type {ResourceType} from "../../services/resourceService.ts";
+﻿import type {ResourceType} from "../services/resourceService.ts";
 
 export type Step = "select" | "configure" | "overview" | "confirmation";
 

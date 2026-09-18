@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { login, type LoginResponse } from "../../services/authService";
+import { login, type LoginResponse } from "../services/authService";
 
 type LoginPageProps = {
   onLogin: (user: LoginResponse) => void;

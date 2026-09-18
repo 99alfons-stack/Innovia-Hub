@@ -1,3 +1,5 @@
+import { BASE_API_URL } from "../config/api.ts";
+
 export type CreateBookingRequest = {
     resourceId: string;
     startTime: string;
@@ -21,7 +23,7 @@ export type Booking = {
     createdAt: string,
 };
 
-const API_URL = "http://localhost:5193/api/Bookings";
+const API_URL = `${BASE_API_URL}/api/Bookings`;
 
 async function getApiError(response: Response, fallback: string): Promise<string> {
     try {

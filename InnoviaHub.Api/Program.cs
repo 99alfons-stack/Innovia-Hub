@@ -73,11 +73,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
+    app.UseHttpsRedirection();
 }
 
 app.UseExceptionHandler();
-
-app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
 app.UseAuthentication();

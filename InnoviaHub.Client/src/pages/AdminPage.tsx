@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { LoginResponse } from "../../services/authService";
+import type { LoginResponse } from "../services/authService";
 import Alert from "../components/Alert";
 import AdminDashboard from "../components/AdminDashboard";
 import AdminNavigation from "../components/AdminNavigation";
@@ -7,8 +7,8 @@ import AdminSensors from "../components/AdminSensors";
 import MembersAdmin from "../components/MembersAdmin";
 import ResourcesAdmin from "../components/ResourcesAdmin";
 import { sensors, type AdminTab } from "../components/adminData";
-import { deleteBooking, getAllBookings, type Booking } from "../../services/bookingApiService";
-import { getAllResources, type Resource } from "../../services/resourceService";
+import { deleteBooking, getAllBookings, type Booking } from "../services/bookingApiService";
+import { getAllResources, type Resource } from "../services/resourceService";
 
 export default function AdminPage({ onBack, user }: { onBack: () => void; user: LoginResponse }) {
   const [tab, setTab] = useState<AdminTab>("dashboard");

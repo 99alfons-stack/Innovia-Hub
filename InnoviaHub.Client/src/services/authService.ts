@@ -1,3 +1,5 @@
+import { BASE_API_URL } from "../config/api.ts";
+
 export type LoginRequest = {
     email: string;
     password: string
@@ -25,14 +27,14 @@ type LoginApiResponse = {
     user: CurrentUserResponse;
 };
 
-const API_URL="http://localhost:5193/api/Auth/login";
-const CURRENT_USER_URL="http://localhost:5193/api/Auth/current-user";
-const LOGOUT_URL="http://localhost:5193/api/Auth/logout";
-const CHANGE_PASSWORD_URL="http://localhost:5193/api/Auth/change-password";
+const LOGIN_URL=`${BASE_API_URL}/api/Auth/login`;
+const CURRENT_USER_URL=`${BASE_API_URL}/api/Auth/current-user`;
+const LOGOUT_URL=`${BASE_API_URL}/api/Auth/logout`;
+const CHANGE_PASSWORD_URL=`${BASE_API_URL}/api/Auth/change-password`;
 
 export async function login(credentials:LoginRequest):Promise<LoginResponse>
 {
-    const response = await fetch(API_URL,{
+    const response = await fetch(LOGIN_URL,{
         method: "POST",
         headers: {"content-Type": "application/json",        
         },

@@ -1,4 +1,4 @@
-﻿import type { Booking } from "../../services/bookingApiService";
+﻿import type { Booking } from "../services/bookingApiService";
 
 export function generateTimeSlots(
     start: number,

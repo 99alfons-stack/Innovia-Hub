@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Alert from "./Alert";
 import AdminStatusBadge from "./AdminStatusBadge";
 import { createResource, createResourceType, deleteResource, getAllResourceTypes, getAllResources,
-  updateResource, type Resource, type ResourceType, type ResourceZone, } from "../../services/resourceService";
+  updateResource, type Resource, type ResourceType, type ResourceZone, } from "../services/resourceService";
 
 type ResourceForm = {
   name: string;

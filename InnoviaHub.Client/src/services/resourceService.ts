@@ -1,3 +1,5 @@
+import { BASE_API_URL} from "../config/api.ts";
+
 export type ResourceZone = 0 | 1 | 2;
 
 export type ResourceType = {
@@ -27,8 +29,8 @@ export type UpdateResourceRequest = CreateResourceRequest & {
     isActive: boolean;
 };
 
-const RESOURCE_API_URL = "http://localhost:5193/api/Resource";
-const RESOURCE_TYPES_API_URL = "http://localhost:5193/api/ResourceTypes";
+const RESOURCE_API_URL = `${BASE_API_URL}/api/Resource`;
+const RESOURCE_TYPES_API_URL = `${BASE_API_URL}/api/ResourceTypes`;
 
 //Hämta alla resurser
 export async function getAllResources(): Promise<Resource[]> {

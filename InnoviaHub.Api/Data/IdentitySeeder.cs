@@ -6,7 +6,9 @@ namespace InnoviaHub.Api.Data;
 
 public static class IdentitySeeder
 {
-    public static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
+    public static async Task SeedRolesAsync(
+    RoleManager<IdentityRole<Guid>> roleManager
+    IConfiguration configuration)
     {
         foreach (var role in Enum.GetValues<UserRoles>())
         {
@@ -26,8 +28,8 @@ public static class IdentitySeeder
         if (admins.Any())
             return;
         
-        var email = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
-        var password = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+        var email = configuration["ADMIN_EMAIL"];
+        var password = configuration["ADMIN_PASSWORD"];
 
         if (string.IsNullOrWhiteSpace(email) ||
             string.IsNullOrWhiteSpace(password))

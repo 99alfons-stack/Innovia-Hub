@@ -23,7 +23,7 @@ builder.Services.AddCors(options =>
    });
 });
 
-var connectionString = Environment.GetEnvironmentVariable("SQL_ConnectionString")
+var connectionString = builder.Configuration["SQL_ConnectionString"]
     ?? throw new InvalidOperationException("SQL_CONNECTION_STRING IS MISSING");
 
 builder.Services.AddDbContext<InnoviaHubDbContext>(options =>
@@ -52,7 +52,7 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
     await IdentitySeeder.SeedRolesAsync(roleManager);
-    await IdentitySeeder.SeedAdminAsync(userManager);
+    await IdentitySeeder.SeedAdminAsync(userManager, app.Configuration);
 }
 
 // Configure the HTTP request pipeline.

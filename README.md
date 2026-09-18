@@ -12,10 +12,17 @@ Kör kommandona från projektets rotmapp.
 
 ### 1. Starta databasen
 
+Skapa en .env-fil i projektets rotmapp med följande innehåll:
+
+Ersätt `<database_name>`, `<username>` och `<password>` med dina egna värden.
+
+```env
+DATABASE=<database_name>
+USERNAME=<username>
+PASSWORD=<password>
+```
+
 ```powershell
-$env:database = "innoviahub"
-$env:username = "postgres"
-$env:password = "postgres"
 docker compose up -d
 ```
 
@@ -23,13 +30,14 @@ docker compose up -d
 
 API:t använder PostgreSQL på port `5433` och kräver en connection string. Sätt variablerna i samma terminalfönster som API:t ska startas i:
 
-```powershell
-$env:SQL_ConnectionString = "Host=localhost;Port=5433;Database=innoviahub;Username=postgres;Password=postgres"
-$env:ADMIN_EMAIL = "admin@innoviahub.se"
-$env:ADMIN_PASSWORD = "Admin1234!"
-```
-
+Ersätt `<database_name>`, `<username>` och `<password>` med dina värden från .env-filen i connection stringen.
 `ADMIN_EMAIL` och `ADMIN_PASSWORD` är valfria och används för att skapa den första administratören.
+
+```powershell
+$env:SQL_ConnectionString = "Host=localhost;Port=5433;Database=<database_name>;Username=<username>;Password=<password>"
+$env:ADMIN_EMAIL = ""
+$env:ADMIN_PASSWORD = ""
+```
 
 Kör migrationerna och starta API:t:
 
@@ -77,3 +85,4 @@ dotnet tool install --global dotnet-ef
 ## Testa API:t
 
 HTTP-anrop finns i `InnoviaHub.Api/Http`. De kan köras direkt från VS Code med REST Client-tillägget.
+Eller så kan ni använda er av Scalar/OpenAPI som finns på `http://localhost:5193/scalar` i utvecklingsläge.

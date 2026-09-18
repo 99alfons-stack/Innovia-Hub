@@ -85,4 +85,10 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");// med detta får klienten anslutning till loclahosten
 
+app.MapGet("/api/ping", () => Results.Ok(new
+{
+    Message = "API is working",
+    Timestamp = DateTime.UtcNow
+}));
+
 app.Run();

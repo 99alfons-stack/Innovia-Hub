@@ -47,12 +47,22 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+    var dbContext =
+        scope.ServiceProvider.GetRequiredService<InnoviaHubDbContext>();
+
+    await dbContext.Database.MigrateAsync();
+
+    var roleManager =
+        scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+    var userManager =
+        scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+
     await IdentitySeeder.SeedRolesAsync(roleManager);
-    await IdentitySeeder.SeedAdminAsync(userManager, app.Configuration);
+    await IdentitySeeder.SeedAdminAsync(userManager, builder.Configuration);
 }
 
 // Configure the HTTP request pipeline.

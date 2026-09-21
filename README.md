@@ -37,7 +37,7 @@ Ersätt `<database_name>`, `<username>` och `<password>` med dina värden från 
 ```powershell
 $env:SQL_ConnectionString = "Host=localhost;Port=5433;Database=<database_name>;Username=<username>;Password=<password>"
 $env:ADMIN_EMAIL = ""
-$env:ADMIN_PASSWORD = ``
+$env:ADMIN_PASSWORD = ''
 ```
 
 > **Krav på `ADMIN_PASSWORD`**

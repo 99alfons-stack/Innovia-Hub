@@ -14,9 +14,10 @@ Kör kommandona från projektets rotmapp.
 
 Skapa en .env-fil i projektets rotmapp med följande innehåll:
 
-Ersätt `<database_name>`, `<username>` och `<password>` med dina egna värden.
+Ersätt `<container_name>`, `<database_name>`, `<username>` och `<password>` med dina egna värden.
 
 ```env
+CONTAINER_NAME=<container_name>
 DATABASE=<database_name>
 USERNAME=<username>
 PASSWORD=<password>
@@ -38,6 +39,17 @@ $env:SQL_ConnectionString = "Host=localhost;Port=5433;Database=<database_name>;U
 $env:ADMIN_EMAIL = ""
 $env:ADMIN_PASSWORD = ""
 ```
+
+> **Krav på `ADMIN_PASSWORD`**
+>
+> Lösenordet måste innehålla:
+> - minst 6 tecken
+> - en stor bokstav (A–Z)
+> - en liten bokstav (a–z)
+> - en siffra (0–9)
+> - ett specialtecken (t.ex. `!` eller `#`)
+>
+> Exempel: `Exempel1234!`
 
 Kör migrationerna och starta API:t:
 

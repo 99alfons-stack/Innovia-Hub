@@ -37,7 +37,7 @@ Ersätt `<database_name>`, `<username>` och `<password>` med dina värden från 
 ```powershell
 $env:SQL_ConnectionString = "Host=localhost;Port=5433;Database=<database_name>;Username=<username>;Password=<password>"
 $env:ADMIN_EMAIL = ""
-$env:ADMIN_PASSWORD = ""
+$env:ADMIN_PASSWORD = ``
 ```
 
 > **Krav på `ADMIN_PASSWORD`**
@@ -50,6 +50,9 @@ $env:ADMIN_PASSWORD = ""
 > - ett specialtecken (t.ex. `!` eller `#`)
 >
 > Exempel: `Exempel1234!`
+> 
+> **Tips:** använd enkla citattecken (`'...'`) runt lösenord i PowerShell,
+> så tolkas inte `$` som en variabel.
 
 Kör migrationerna och starta API:t:
 
@@ -61,6 +64,12 @@ dotnet run --project InnoviaHub.Api --launch-profile http
 API:t körs på `http://localhost:5193`. OpenAPI/Scalar finns på `http://localhost:5193/scalar` i utvecklingsläge.
 
 ### 3. Starta klienten
+
+Skapa en `.env`-fil i `InnoviaHub.Client` med följande innehåll:
+
+```env
+VITE_API_URL=http://localhost:5193
+```
 
 Öppna ett nytt terminalfönster:
 

@@ -26,7 +26,7 @@ export default function LandingPage({ onBook, user }: { onBook: () => void; user
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
 
   const stats = [
-  { value: memberCount === null ? "..." : String(memberCount), label: "Aktiva medlemmar"},
+  ...(user?.isAdmin ? [{ value: memberCount === null ? "..." : String(memberCount), label: "Aktiva medlemmar" }] : []),
   { value: occupancy === null ? "..." : `${occupancy}%`, label: "Beläggning idag"},
   { value: "12 ms", label: "API-svarstid" },
   { value: "23°C", label: "Snitttemperatur" },
@@ -34,11 +34,15 @@ export default function LandingPage({ onBook, user }: { onBook: () => void; user
 
   useEffect(() => {
     async function loadStats() {
-      const [users, bookings, resources] = await Promise.all([
-        getAllUsers(),
+      const [bookings, resources, users] = await Promise.all([
         getAllBookings(),
         getAllResources(),
+        user?.isAdmin ? getAllUsers() : Promise.resolve(null),
       ]);
+
+      if (users) {
+        setMemberCount(users.length);
+      }
 
       const userBookings = bookings.filter((booking) =>
       booking.user.id === user?.userId && !booking.isCancelled && 
@@ -46,8 +50,6 @@ export default function LandingPage({ onBook, user }: { onBook: () => void; user
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
       
       setMyBookings(userBookings);
-
-      setMemberCount(users.length);
 
       const activeResources = resources.filter((resource) => resource.isActive);
       const now = new Date();
@@ -98,7 +100,7 @@ export default function LandingPage({ onBook, user }: { onBook: () => void; user
       setOccupancy(activeResources.length === 0 ? 0 : Math.round((occupiedResourceIds.size / activeResources.length) * 100))
     }
     loadStats().catch(console.error)
-  }, [dataVersion, user?.userId])
+  }, [dataVersion, user?.isAdmin, user?.userId])
 
   useEffect(() => {
     function handleBookingCreated() {
